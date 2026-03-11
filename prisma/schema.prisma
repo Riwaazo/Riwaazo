@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(uuid()) @db.Uuid
+  email               String               @unique
+  name                String?
+  role                Role                 @default(USER)
+  hashedPassword      String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  accounts            Account[]
+  bookings            Booking[]
+  budgetLines         BudgetLine[]
+  calendarSlots       CalendarSlot[]
+  events              Event[]              @relation("UserEvents")
+  eventPlannerProfile EventPlannerProfile?
+  messages            Message[]
+  notifications       Notification[]
+  sessions            Session[]
+  tasks               Task[]
+  vendorProfile       VendorProfile?
+  venues              Venue[]              @relation("OwnerVenues")
+}
+
+model VendorProfile {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @unique @db.Uuid
+  companyName String
+  phone       String?
+  services    String?
+  description String?
+  website     String?
+  status      ApprovalStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+  user        User      @relation(fields: [userId], references: [id])
+  venues      Venue[]
+}
+
+model EventPlannerProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  companyName String
+  phone       String?
+  services    String?
+  description String?
+  website     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Venue {
+  id          String         @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String         @unique
+  location    String?
+  mapEmbedUrl String?
+  capacity    Int?
+  priceRange  String?
+  description String?
+  rating      Float?        @default(0)
+  amenities   String[]       @default([])
+  images      String[]       @default([])
+  vendorId    String?        @db.Uuid
+  ownerId     String?        @db.Uuid
+  status      ApprovalStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  bookings    Booking[]
+  events      Event[]
+  owner       User?          @relation("OwnerVenues", fields: [ownerId], references: [id])
+  vendor      VendorProfile? @relation(fields: [vendorId], references: [id])
+
+  @@index([slug])
+  @@index([vendorId])
+  @@index([ownerId])
+}
+
+model Event {
+  id             String               @id @default(uuid()) @db.Uuid
+  title          String
+  description    String?
+  date           DateTime?
+  status         EventStatus          @default(DRAFT)
+  budget         Int?
+  venueId        String?              @db.Uuid
+  organizerId    String?              @db.Uuid
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  eventPlannerId String?              @db.Uuid
+  eventPlanner   EventPlannerProfile? @relation(fields: [eventPlannerId], references: [id])
+  organizer      User?                @relation("UserEvents", fields: [organizerId], references: [id])
+  venue          Venue?               @relation(fields: [venueId], references: [id])
+
+  @@index([eventPlannerId])
+}
+
+model Booking {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @db.Uuid
+  venueId    String         @db.Uuid
+  vendorId   String?        @db.Uuid
+  status     BookingStatus  @default(PENDING)
+  eventDate  DateTime
+  guestCount Int?
+  notes      String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  user       User           @relation(fields: [userId], references: [id])
+  vendor     VendorProfile? @relation(fields: [vendorId], references: [id])
+  venue      Venue          @relation(fields: [venueId], references: [id])
+
+  @@index([userId])
+  @@index([venueId])
+  @@index([vendorId])
+}
+
+model Task {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  title     String
+  due       DateTime?
+  owner     String?
+  status    TaskStatus   @default(OPEN)
+  priority  TaskPriority @default(MEDIUM)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  user      User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  fromName  String
+  subject   String
+  preview   String?
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  title     String
+  category  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+}
+
+model BudgetLine {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  category  String
+  allocated Int      @default(0)
+  spent     Int      @default(0)
+  status    String   @default("Open")
+  owner     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model CalendarSlot {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  date      DateTime
+  location  String?
+  type      String   @default("Custom")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+}
+
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([expires])
+}
+
+enum Role {
+  USER
+  VENDOR
+  VENUE
+  ADMIN
+  EVENT_PLANNER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
