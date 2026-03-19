@@ -1,4 +1,5 @@
 # Riwaazo
+<<<<<<< HEAD
 
 Next.js 14 (App Router) app for the Riwaazo marketplace/admin. Stack: TypeScript, Tailwind, Prisma, Supabase Auth/Postgres.
 
@@ -37,3 +38,6 @@ Copy `.env.example` to `.env` (if present) and set:
 ## Deployment
 
 Build as a standard Next.js app. Ensure env values are set in the target environment and run `npx prisma migrate deploy` before starting the server.
+=======
+Riwaazo is a digital event infrastructure platform offering marketplace discovery, vendor CRM, workflow automation, and AI-powered event execution tools.
+>>>>>>> origin/main
