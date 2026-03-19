@@ -12,6 +12,12 @@ import {
   Star,
   Wallet,
   CheckCircle,
+  Check,
+  Send,
+  Paperclip,
+  Image as ImageIcon,
+  Link2,
+  X,
 } from "lucide-react";
 import SwipeTransition from "@/components/layout/SwipeTransition";
 import Navbar from "@/components/shared/Navbar";
@@ -44,12 +50,23 @@ export default function VenueDashboard() {
   const [uploadingGalleryIndex, setUploadingGalleryIndex] = useState<number | null>(null);
   const [savingListing, setSavingListing] = useState(false);
   const [listingMessage, setListingMessage] = useState<string | null>(null);
+  const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [settingsName, setSettingsName] = useState("Venue partner");
   const [settingsPhone, setSettingsPhone] = useState("");
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
   const [tab, setTab] = useState<"overview" | "inquiries" | "bookings" | "listing" | "settings">("overview");
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [threadMessages, setThreadMessages] = useState<Record<string, any[]>>({});
+  const [threadLoading, setThreadLoading] = useState<Record<string, boolean>>({});
+  const [threadError, setThreadError] = useState<Record<string, string | null>>({});
+  const [threadInput, setThreadInput] = useState<Record<string, string>>({});
+  const [msgAttachments, setMsgAttachments] = useState<Record<string, Array<{ type: string; url: string }>>>({});
+  const [showMsgAttachForm, setShowMsgAttachForm] = useState<Record<string, boolean>>({});
+  const [msgAttachUrl, setMsgAttachUrl] = useState("");
+  const [msgAttachType, setMsgAttachType] = useState("image");
+  const [bookingUpdateLoading, setBookingUpdateLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     (async () => {
@@ -176,9 +193,10 @@ export default function VenueDashboard() {
   };
 
   const handleSaveListing = async () => {
-    if (!selectedVenueId) return;
+    if (!selectedVenueId) return handleCreateVenue();
     setSavingListing(true);
     setListingMessage(null);
+    setCreationMessage(null);
     const capacityValue = Number(venueForm.capacity);
     const safeCapacity = Number.isFinite(capacityValue) ? capacityValue : undefined;
     try {
@@ -214,6 +232,50 @@ export default function VenueDashboard() {
       setListingMessage("Saved");
     } catch (err) {
       setListingMessage(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSavingListing(false);
+    }
+  };
+
+  const handleCreateVenue = async () => {
+    setSavingListing(true);
+    setListingMessage(null);
+    setCreationMessage(null);
+    const capacityValue = Number(venueForm.capacity);
+    const safeCapacity = Number.isFinite(capacityValue) ? capacityValue : undefined;
+    try {
+      const res = await fetch("/api/venues", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          venue: {
+            name: venueForm.name || "Untitled venue",
+            location: venueForm.location,
+            mapEmbedUrl: venueForm.mapEmbedUrl,
+            capacity: safeCapacity,
+            priceRange: venueForm.priceRange,
+            amenities: venueForm.amenities.split(",").map((a) => a.trim()).filter(Boolean),
+            images: [
+              bannerUrl,
+              ...gallerySlots.map((a) => a.trim()).filter(Boolean),
+            ].filter(Boolean),
+            description: venueForm.description,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail?.error || "Create failed");
+      }
+
+      const created = await res.json();
+      setVenues((prev) => [created, ...prev]);
+      setSelectedVenueId(created.id);
+      setCreationMessage("Draft venue created. You can keep editing and save again.");
+    } catch (err) {
+      setCreationMessage(err instanceof Error ? err.message : "Failed to create venue");
     } finally {
       setSavingListing(false);
     }
@@ -288,6 +350,77 @@ export default function VenueDashboard() {
     PENDING: "bg-blue-500/15 text-blue-200 border-blue-500/30",
     CONFIRMED: "bg-green-500/15 text-green-200 border-green-500/30",
     CANCELLED: "bg-red-500/15 text-red-200 border-red-500/30",
+  };
+
+  const loadThread = async (bookingId: string) => {
+    setThreadLoading((prev) => ({ ...prev, [bookingId]: true }));
+    setThreadError((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const res = await fetch(`/api/bookings/messages?bookingId=${bookingId}`, { credentials: "include", cache: "no-store" });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail?.error || "Failed to load messages");
+      }
+      const json = await res.json();
+      setThreadMessages((prev) => ({ ...prev, [bookingId]: Array.isArray(json) ? json : [] }));
+    } catch (err) {
+      setThreadError((prev) => ({ ...prev, [bookingId]: err instanceof Error ? err.message : "Failed to load messages" }));
+    } finally {
+      setThreadLoading((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
+  const sendThreadMessage = async (bookingId: string) => {
+    const content = (threadInput[bookingId] || "").trim();
+    if (!content) return;
+    setThreadLoading((prev) => ({ ...prev, [bookingId]: true }));
+    setThreadError((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const payload: any = { bookingId, content };
+      const atts = msgAttachments[bookingId];
+      if (atts?.length) payload.attachments = atts;
+      const res = await fetch("/api/bookings/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail?.error || "Failed to send message");
+      }
+      const json = await res.json();
+      setThreadMessages((prev) => ({ ...prev, [bookingId]: [...(prev[bookingId] || []), json] }));
+      setThreadInput((prev) => ({ ...prev, [bookingId]: "" }));
+      setMsgAttachments((prev) => ({ ...prev, [bookingId]: [] }));
+    } catch (err) {
+      setThreadError((prev) => ({ ...prev, [bookingId]: err instanceof Error ? err.message : "Failed to send message" }));
+    } finally {
+      setThreadLoading((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
+  const updateBookingStatus = async (bookingId: string, status: "CONFIRMED" | "CANCELLED") => {
+    setBookingUpdateLoading((prev) => ({ ...prev, [bookingId]: true }));
+    const previous = bookingsData;
+    setBookingsData((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status } : b)));
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: bookingId, status }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail?.error || "Failed to update booking");
+      }
+    } catch (err) {
+      setBookingsData(previous);
+      setThreadError((prev) => ({ ...prev, [bookingId]: err instanceof Error ? err.message : "Failed to update booking" }));
+    } finally {
+      setBookingUpdateLoading((prev) => ({ ...prev, [bookingId]: false }));
+    }
   };
 
   const renderContent = () => {
@@ -500,8 +633,8 @@ export default function VenueDashboard() {
                 {loadError && (
                   <div className="rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-4 py-3 text-sm">{loadError}</div>
                 )}
-                {listingMessage && (
-                  <div className="rounded-lg border border-white/15 bg-white/10 text-white px-4 py-2 text-sm">{listingMessage}</div>
+                {(listingMessage || creationMessage) && (
+                  <div className="rounded-lg border border-white/15 bg-white/10 text-white px-4 py-2 text-sm">{listingMessage || creationMessage}</div>
                 )}
                 {loadingData && (
                   <div className="rounded-lg border border-white/10 bg-white/5 text-gray-200 px-4 py-3 text-sm">Loading venues…</div>
@@ -514,17 +647,26 @@ export default function VenueDashboard() {
                   </div>
                   <div className="flex gap-3 items-center">
                     <label className="text-sm text-gray-200">Select venue</label>
-                    <select
-                      className="bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-white focus:outline-none"
-                      value={selectedVenueId || ""}
-                      onChange={(e) => setSelectedVenueId(e.target.value)}
-                    >
-                      {venues.map((v) => (
-                        <option key={v.id} value={v.id} className="bg-[#2A0000]">
-                          {v.name || "Venue"}
-                        </option>
-                      ))}
-                    </select>
+                    {venues.length > 0 ? (
+                      <select
+                        className="bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-white focus:outline-none"
+                        value={selectedVenueId || ""}
+                        onChange={(e) => setSelectedVenueId(e.target.value)}
+                      >
+                        {venues.map((v) => (
+                          <option key={v.id} value={v.id} className="bg-[#2A0000]">
+                            {v.name || "Venue"}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <button
+                        onClick={handleCreateVenue}
+                        className="px-4 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors"
+                      >
+                        Create my first venue
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -548,14 +690,8 @@ export default function VenueDashboard() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-gray-200">Map embed URL</label>
-                      <input
-                        className="w-full bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-white focus:outline-none"
-                        placeholder="https://www.google.com/maps/embed?..."
-                        value={venueForm.mapEmbedUrl}
-                        onChange={(e) => setVenueForm({ ...venueForm, mapEmbedUrl: e.target.value })}
-                      />
-                      {(venueForm.mapEmbedUrl || venueForm.location) && (
+                      <label className="text-sm text-gray-200">Map preview</label>
+                      {(venueForm.mapEmbedUrl || venueForm.location) ? (
                         <div className="h-48 rounded-lg overflow-hidden border border-white/10 bg-black/30">
                           <iframe
                             title="Map preview"
@@ -565,6 +701,8 @@ export default function VenueDashboard() {
                             referrerPolicy="no-referrer-when-downgrade"
                           />
                         </div>
+                      ) : (
+                        <p className="text-sm text-gray-300">Add a location to see a map preview.</p>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -685,7 +823,7 @@ export default function VenueDashboard() {
                     <div className="p-6 space-y-5 bg-gradient-to-br from-[#1F0A0A] to-[#2C0A0A]">
                       {/* Highlights */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {(venueForm.amenities || venueForm.services || "").split(",").map((a) => a.trim()).filter(Boolean).slice(0, 6).map((item) => (
+                        {(venueForm.amenities || "").split(",").map((a: string) => a.trim()).filter(Boolean).slice(0, 6).map((item: string) => (
                           <div key={item} className="flex items-start gap-2 text-gray-200 text-sm">
                             <Check size={16} className="text-[#C6A14A]" />
                             <span>{item}</span>
@@ -754,11 +892,11 @@ export default function VenueDashboard() {
 
                 <div className="flex justify-end">
                   <button
-                    onClick={handleSaveListing}
-                    disabled={savingListing || !selectedVenueId}
+                    onClick={selectedVenueId ? handleSaveListing : handleCreateVenue}
+                    disabled={savingListing}
                     className="px-4 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors disabled:opacity-60"
                   >
-                    {savingListing ? "Saving…" : "Save listing"}
+                    {savingListing ? "Saving…" : selectedVenueId ? "Save listing" : "Create listing"}
                   </button>
                 </div>
               </div>
@@ -866,19 +1004,137 @@ export default function VenueDashboard() {
                   {bookingsForVenue.map((booking) => (
                     <div
                       key={booking.id}
-                      className="p-4 rounded-lg bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                      className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3"
                     >
-                      <div>
-                        <p className="text-white font-semibold">{booking.user?.name || "Booking"}</p>
-                        <p className="text-gray-300 text-sm">{booking.venue?.name || currentVenue?.name || "Venue"} · {formatDate(booking.eventDate)}</p>
-                        {booking.notes && <p className="text-xs text-gray-400 mt-1">{booking.notes}</p>}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <p className="text-white font-semibold">{booking.user?.name || "Booking"}</p>
+                          <p className="text-gray-300 text-sm">{booking.venue?.name || currentVenue?.name || "Venue"} · {formatDate(booking.eventDate)}</p>
+                          {booking.notes && <p className="text-xs text-gray-400 mt-1">{booking.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[#C6A14A] font-semibold">{booking.guestCount ? `${booking.guestCount} guests` : ""}</span>
+                          <span className={`px-3 py-1 rounded-full text-xs border ${statusStyles[booking.status] || "border-white/20 text-white"}`}>
+                            {booking.status}
+                          </span>
+                          {booking.status === "PENDING" && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateBookingStatus(booking.id, "CONFIRMED")}
+                                disabled={bookingUpdateLoading[booking.id]}
+                                className="px-3 py-1 rounded-lg bg-green-500/20 border border-green-500/40 text-green-200 text-xs hover:bg-green-500/30 disabled:opacity-60"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => updateBookingStatus(booking.id, "CANCELLED")}
+                                disabled={bookingUpdateLoading[booking.id]}
+                                className="px-3 py-1 rounded-lg bg-red-500/20 border border-red-500/40 text-red-200 text-xs hover:bg-red-500/30 disabled:opacity-60"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              const next = activeThreadId === booking.id ? null : booking.id;
+                              setActiveThreadId(next);
+                              if (next && !threadMessages[booking.id] && !threadLoading[booking.id]) {
+                                loadThread(booking.id);
+                              }
+                            }}
+                            className="px-3 py-1 rounded-lg border border-white/20 text-white text-xs hover:bg-white/10 transition-colors"
+                          >
+                            {activeThreadId === booking.id ? "Hide messages" : "Message"}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[#C6A14A] font-semibold">{booking.guestCount ? `${booking.guestCount} guests` : ""}</span>
-                        <span className={`px-3 py-1 rounded-full text-xs border ${statusStyles[booking.status] || "border-white/20 text-white"}`}>
-                          {booking.status}
-                        </span>
-                      </div>
+
+                      {activeThreadId === booking.id && (
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-2">
+                          {threadError[booking.id] && (
+                            <div className="text-xs text-red-200">{threadError[booking.id]}</div>
+                          )}
+                          <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                            {(threadMessages[booking.id] || []).map((msg) => {
+                              const ts = msg.createdAt ? new Date(msg.createdAt) : null;
+                              const msgAtts = Array.isArray(msg.attachments) ? msg.attachments : [];
+                              return (
+                                <div key={msg.id} className="text-sm text-gray-100">
+                                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 capitalize">{(msg.senderRole || "guest").toLowerCase()}</span>
+                                    {ts && <span>{ts.toLocaleString()}</span>}
+                                  </div>
+                                  <p className="mt-1 text-white">{msg.content}</p>
+                                  {msgAtts.map((att: any, ai: number) => (
+                                    <div key={ai} className="mt-1">
+                                      {att.type === "image" && <img src={att.url} alt="attachment" className="max-w-full max-h-32 rounded" />}
+                                      {att.type === "video" && <video src={att.url} controls className="max-w-full max-h-32 rounded" />}
+                                      {att.type === "link" && <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline break-all text-xs">{att.url}</a>}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                            {threadLoading[booking.id] && (
+                              <div className="text-xs text-gray-300">Loading messages…</div>
+                            )}
+                            {!threadLoading[booking.id] && (threadMessages[booking.id] || []).length === 0 && (
+                              <div className="text-xs text-gray-300">No messages yet.</div>
+                            )}
+                          </div>
+                          {/* Attachment preview */}
+                          {(msgAttachments[booking.id] || []).length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {(msgAttachments[booking.id] || []).map((att, ai) => (
+                                <span key={ai} className="flex items-center gap-1 bg-white/10 text-white text-xs px-2 py-1 rounded-lg border border-white/20">
+                                  {att.type === "image" && <ImageIcon size={12} />}
+                                  {att.type === "video" && <span className="text-[10px]">VID</span>}
+                                  {att.type === "link" && <Link2 size={12} />}
+                                  <span className="max-w-[100px] truncate">{att.url}</span>
+                                  <button onClick={() => setMsgAttachments((p) => { const a = [...(p[booking.id] || [])]; a.splice(ai, 1); return { ...p, [booking.id]: a }; })} className="text-red-300 hover:text-red-100"><X size={12} /></button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Attachment form */}
+                          {showMsgAttachForm[booking.id] && (
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-2">
+                              <select className="bg-transparent border border-white/20 rounded px-2 py-1 text-xs text-white" value={msgAttachType} onChange={(e) => setMsgAttachType(e.target.value)}>
+                                <option className="bg-[#0B0B14]" value="image">Image</option>
+                                <option className="bg-[#0B0B14]" value="video">Video</option>
+                                <option className="bg-[#0B0B14]" value="link">Link</option>
+                              </select>
+                              <input className="flex-1 bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none" placeholder="Paste URL…" value={msgAttachUrl} onChange={(e) => setMsgAttachUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { if (msgAttachUrl.trim()) { setMsgAttachments((p) => ({ ...p, [booking.id]: [...(p[booking.id] || []), { type: msgAttachType, url: msgAttachUrl.trim() }] })); setMsgAttachUrl(""); setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false })); } } }} />
+                              <button onClick={() => { if (msgAttachUrl.trim()) { setMsgAttachments((p) => ({ ...p, [booking.id]: [...(p[booking.id] || []), { type: msgAttachType, url: msgAttachUrl.trim() }] })); setMsgAttachUrl(""); setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false })); } }} className="text-xs px-2 py-1 bg-[#C6A14A] text-black rounded font-semibold">Add</button>
+                              <button onClick={() => setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false }))} className="text-gray-400 hover:text-white"><X size={14} /></button>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setShowMsgAttachForm((p) => ({ ...p, [booking.id]: !p[booking.id] }))} className="p-2 text-gray-300 hover:text-[#C6A14A] transition-colors" title="Attach image, video, or link">
+                              <Paperclip size={16} />
+                            </button>
+                            <input
+                              className="flex-1 bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-white focus:outline-none"
+                              placeholder="Type a reply"
+                              value={threadInput[booking.id] || ""}
+                              onChange={(e) => setThreadInput((prev) => ({ ...prev, [booking.id]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendThreadMessage(booking.id); } }}
+                              onFocus={() => {
+                                if (!threadMessages[booking.id] && !threadLoading[booking.id]) loadThread(booking.id);
+                              }}
+                            />
+                            <button
+                              onClick={() => sendThreadMessage(booking.id)}
+                              disabled={threadLoading[booking.id]}
+                              className="px-3 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors disabled:opacity-60"
+                            >
+                              Send
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {bookingsForVenue.length === 0 && (

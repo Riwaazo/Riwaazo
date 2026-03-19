@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { Role } from "@prisma/client";
 
 async function getSessionUser() {
   const supabase = await createClient();
@@ -10,17 +11,38 @@ async function getSessionUser() {
 
   if (!user) return null;
 
-  const dbUser = await prisma.user.findUnique({
+  const mappedRole = (() => {
+    const raw = (user.user_metadata?.role as string | undefined)?.toLowerCase();
+    switch (raw) {
+      case "vendor":
+        return Role.VENDOR;
+      case "venue-owner":
+        return Role.VENUE;
+      case "planner":
+      case "event_planner":
+      case "event-planner":
+        return Role.EVENT_PLANNER;
+      case "admin":
+        return Role.ADMIN;
+      default:
+        return Role.USER;
+    }
+  })();
+
+  const name = user.user_metadata?.full_name || user.email || "User";
+  const email = user.email || `${user.id}@placeholder.local`;
+
+  const dbUser = await prisma.user.upsert({
     where: { id: user.id },
+    create: { id: user.id, email, name, role: mappedRole },
+    update: { role: mappedRole, name },
     select: { role: true, name: true },
   });
 
-  const role = (user.user_metadata?.role as string | undefined)?.toUpperCase() || dbUser?.role || "USER";
-
   return {
     id: user.id,
-    role,
-    name: dbUser?.name || user.user_metadata?.full_name || user.email || "User",
+    role: dbUser.role,
+    name: dbUser.name || name,
   };
 }
 

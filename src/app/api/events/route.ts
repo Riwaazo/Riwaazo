@@ -92,3 +92,49 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch events", detail: message }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  const session = await getSessionUser();
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await request.json();
+    const id = body?.id as string | undefined;
+    const status = body?.status as string | undefined;
+
+    if (!id)
+      return NextResponse.json({ error: "Event id is required" }, { status: 400 });
+
+    const existing = await prisma.event.findUnique({ where: { id } });
+    if (!existing)
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+
+    const isOwner = existing.organizerId === session.id;
+    const isAdmin = session.role === "ADMIN";
+
+    if (!isOwner && !isAdmin)
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+
+    const data: Prisma.EventUpdateInput = {};
+    if (status) data.status = status as any;
+    if (body.title) data.title = body.title;
+    if (body.description !== undefined) data.description = body.description;
+    if (body.date) data.date = new Date(body.date);
+    if (body.budget !== undefined) data.budget = body.budget;
+
+    const updated = await prisma.event.update({
+      where: { id },
+      data,
+      include: {
+        venue: { select: { id: true, name: true, location: true } },
+        organizer: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("PATCH /api/events", error);
+    return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
+  }
+}

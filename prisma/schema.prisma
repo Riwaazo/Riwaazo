@@ -33,8 +33,13 @@ model VendorProfile {
   id          String    @id @default(uuid()) @db.Uuid
   userId      String    @unique @db.Uuid
   companyName String
+  location    String?
+  mapEmbedUrl String?
   phone       String?
   services    String?
+  packages    Json?
+  packagesDraft Json?
+  eventTypes  String[]  @default([])
   description String?
   website     String?
   status      ApprovalStatus @default(PENDING)
@@ -68,6 +73,7 @@ model Venue {
   capacity    Int?
   priceRange  String?
   description String?
+  eventTypes  String[]       @default([])
   rating      Float?        @default(0)
   amenities   String[]       @default([])
   images      String[]       @default([])
@@ -119,10 +125,25 @@ model Booking {
   user       User           @relation(fields: [userId], references: [id])
   vendor     VendorProfile? @relation(fields: [vendorId], references: [id])
   venue      Venue          @relation(fields: [venueId], references: [id])
+  messages   BookingMessage[]
 
   @@index([userId])
   @@index([venueId])
   @@index([vendorId])
+}
+
+model BookingMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  bookingId   String   @db.Uuid
+  senderId    String   @db.Uuid
+  senderRole  String
+  content     String
+  attachments Json?
+  createdAt   DateTime @default(now())
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@index([createdAt])
 }
 
 model Task {

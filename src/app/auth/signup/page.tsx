@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/shared/Navbar";
 import { Mail, Lock, User, Building2, Phone, MapPin, CheckSquare } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignupPage() {
+function SignupContent() {
   const searchParams = useSearchParams();
   const allowedRoles = useMemo(() => ["user", "vendor", "venue-owner", "planner"] as const, []);
   const supabase = useMemo(() => createClient(), []);
@@ -108,7 +108,7 @@ export default function SignupPage() {
     } else {
       // Ensure role metadata sticks even if Supabase returns a user session immediately
       if (data.user && !data.user.user_metadata?.role) {
-        await supabase.auth.updateUser({ data: { role, ...metadata } });
+        await supabase.auth.updateUser({ data: metadata });
       }
       setFormSuccess("Check your email to confirm your account, then sign in.");
       setName("");
@@ -421,5 +421,13 @@ export default function SignupPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000]" />}>
+      <SignupContent />
+    </Suspense>
   );
 }

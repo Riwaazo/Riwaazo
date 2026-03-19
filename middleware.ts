@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createMiddlewareClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 const roleRouteMap: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/vendor", roles: ["vendor"] },
@@ -26,7 +26,23 @@ const dashboardForRole = (role?: string | null) => {
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next({ request: { headers: req.headers } });
-  const supabase = createMiddlewareClient({ req, res });
+  const supabase = createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          res.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          res.cookies.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+    }
+  );
 
   const url = req.nextUrl;
   const path = url.pathname;

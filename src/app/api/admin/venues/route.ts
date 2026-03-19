@@ -10,10 +10,19 @@ async function getAdminSession() {
 
   if (!user) return null;
 
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
+  const dbUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: user.id },
+        ...(user.email ? [{ email: user.email }] : []),
+      ],
+    },
+    select: { id: true, role: true },
+  });
+
   const role = (user.user_metadata?.role as string | undefined)?.toUpperCase() || dbUser?.role || "USER";
   if (role !== "ADMIN") return null;
-  return { id: user.id, role };
+  return { id: dbUser?.id || user.id, role };
 }
 
 export async function PATCH(req: NextRequest) {

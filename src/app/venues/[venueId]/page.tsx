@@ -117,8 +117,8 @@ export default function VenueDetailPage() {
   }
 
   const mapUrl = venueData.mapEmbedUrl || (venueData.location ? `https://www.google.com/maps?q=${encodeURIComponent(venueData.location)}&output=embed` : null);
-  const amenities = (venueData.amenities || []).map((name: string) => ({ icon: Check, name }));
-  const highlights = amenities.slice(0, 6).map((a) => a.name);
+  const amenities: { icon: typeof Check; name: string }[] = (venueData.amenities || []).map((name: string) => ({ icon: Check, name }));
+  const highlights: string[] = amenities.slice(0, 6).map((a) => a.name);
   const capacityValue = venueData.capacity || venueData.capacityRange?.max;
 
   return (
@@ -187,7 +187,7 @@ export default function VenueDetailPage() {
 
                 {/* Thumbnail Strip */}
                 <div className="flex gap-2 mt-4 overflow-x-auto">
-                  {venueData.images.map((img, idx) => (
+                  {venueData.images.map((img: string, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => setCurrentImage(idx)}
@@ -232,7 +232,7 @@ export default function VenueDetailPage() {
                           {venueData.rating}
                         </span>
                         <span className="text-gray-400">
-                          ({venueData.reviews.length} reviews)
+                          ({venueData.reviewCount ?? 0} reviews)
                         </span>
                       </div>
                     </div>
@@ -340,7 +340,7 @@ export default function VenueDetailPage() {
                   Amenities & Features
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {venueData.amenities.map((amenity, idx) => {
+                  {amenities.map((amenity, idx) => {
                     const Icon = amenity.icon;
                     return (
                       <div
@@ -368,7 +368,7 @@ export default function VenueDetailPage() {
                   Venue Highlights
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {venueData.highlights.map((highlight, idx) => (
+                  {highlights.map((highlight, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <Check size={18} className="text-[#C6A14A]" />
                       <span className="text-gray-300">{highlight}</span>
@@ -380,7 +380,7 @@ export default function VenueDetailPage() {
                   <h3 className="text-lg font-semibold text-white mb-2">
                     Vendor Policy
                   </h3>
-                  <p className="text-gray-300">{venueData.vendorRestrictions}</p>
+                  <p className="text-gray-300">{venueData.vendorRestrictions || "Contact venue for vendor policy details."}</p>
                 </div>
               </motion.div>
 
@@ -402,31 +402,35 @@ export default function VenueDetailPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {venueData.reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="bg-white/5 rounded-lg p-4 border border-white/10"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h4 className="text-white font-semibold">
-                            {review.name}
-                          </h4>
-                          <p className="text-gray-400 text-sm">{review.date}</p>
+                  {(venueData.reviews ?? []).length > 0 ? (
+                    venueData.reviews.map((review: any) => (
+                      <div
+                        key={review.id}
+                        className="bg-white/5 rounded-lg p-4 border border-white/10"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {review.name}
+                            </h4>
+                            <p className="text-gray-400 text-sm">{review.date}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Star
+                                key={i}
+                                size={14}
+                                className="text-[#C6A14A] fill-[#C6A14A]"
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {[...Array(review.rating)].map((_, i) => (
-                            <Star
-                              key={i}
-                              size={14}
-                              className="text-[#C6A14A] fill-[#C6A14A]"
-                            />
-                          ))}
-                        </div>
+                        <p className="text-gray-300">{review.comment}</p>
                       </div>
-                      <p className="text-gray-300">{review.comment}</p>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-center py-6">No reviews yet. Be the first to share your experience!</p>
+                  )}
                 </div>
 
                 <button className="w-full mt-6 py-3 border border-[#C6A14A] text-[#C6A14A] font-semibold rounded-lg hover:bg-[#C6A14A]/10 transition-colors">
@@ -462,7 +466,7 @@ export default function VenueDetailPage() {
               >
                 <div className="mb-6">
                   <div className="text-3xl font-bold text-white mb-1">
-                    ₹{(venueData.price / 100000).toFixed(1)}L
+                    {formatPrice(venueData.price ?? venueData.priceRange)}
                   </div>
                   <p className="text-gray-400 text-sm">Starting price</p>
                 </div>

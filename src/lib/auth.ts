@@ -1,6 +1,7 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import { type NextAuthOptions } from "next-auth";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { Role } from "@prisma/client";
 
 import prisma from "./prisma";
 
@@ -12,7 +13,7 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-export const authConfig: NextAuthConfig = {
+export const authConfig: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "database" },
   providers: [
@@ -25,11 +26,13 @@ export const authConfig: NextAuthConfig = {
     session: async ({ session, user }) => {
       if (session.user) {
         session.user.id = user.id;
-        session.user.role = (user as { role?: string }).role;
+        const role = (user as { role?: Role | null }).role;
+        if (role) {
+          session.user.role = role;
+        }
       }
       return session;
     },
   },
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

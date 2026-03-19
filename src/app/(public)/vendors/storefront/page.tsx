@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+// Gallery upload state and logic for booking/contact panel
+// ...existing code...
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Star, MapPin, Camera, Users, Check, Phone, Mail, Share2, Sparkles } from "lucide-react";
+import { Star, MapPin, Camera, Users, Check, Phone, Mail, Share2, Sparkles, Calendar, Shield } from "lucide-react";
 import SwipeTransition from "@/components/layout/SwipeTransition";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
@@ -22,7 +24,54 @@ const formatCurrency = (value?: string | null) => {
   return value.startsWith("₹") ? value : `₹${value}`;
 };
 
-export default function VendorStorefront() {
+const fallbackVendor = {
+  id: "demo-vendor",
+  companyName: "Golden Events Co.",
+  services: "Catering, Decor, Lighting",
+  description: "Full-service event vendor for weddings and corporate functions.",
+  rating: "4.9",
+  reviews: 156,
+  phone: "+92 300 1234567",
+  website: "https://golden-events.example.com",
+  user: { email: "vendor@example.com" },
+  venues: [
+    {
+      id: "demo-venue",
+      name: "Aurora Banquets",
+      location: "Lahore, Pakistan",
+      capacity: 300,
+      priceRange: "200k - 500k",
+      description: "Modern banquet hall with ambient lighting and indoor/outdoor options.",
+      amenities: ["Parking", "Bridal Suite", "AV", "Catering", "Generator Backup"],
+      images: [
+        "https://images.unsplash.com/photo-1529634899554-1c1a26ad6b48",
+        "https://images.unsplash.com/photo-1521540216272-a50305cd4421",
+      ],
+    },
+  ],
+};
+
+function VendorStorefrontContent() {
+  // Booking/contact panel state and logic (must be inside component)
+  const [selectedDate, setSelectedDate] = useState("");
+  const [guestCount, setGuestCount] = useState("");
+  const [bookingMessage, setBookingMessage] = useState<string | null>(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+
+  // Simulate booking submission (replace with real API as needed)
+  const submitBooking = async (intent: "visit" | "quote" | "reserve") => {
+    setBookingLoading(true);
+    setBookingMessage(null);
+    try {
+      // TODO: Replace with real API call for vendor booking
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      setBookingMessage("Request sent. We will reach out soon.");
+    } catch (err) {
+      setBookingMessage("Failed to submit booking");
+    } finally {
+      setBookingLoading(false);
+    }
+  };
   const searchParams = useSearchParams();
   const router = useRouter();
   const vendorIdFromUrl = searchParams.get("vendorId") || searchParams.get("id") || "";
@@ -33,6 +82,43 @@ export default function VendorStorefront() {
   const [vendorId, setVendorId] = useState<string>(vendorIdFromUrl);
 
   const heroClass = useMemo(() => gradientPalette[0], []);
+
+  // Helper to render packages
+  const renderPackages = () => {
+    const packages: any[] = Array.isArray(vendor?.packages) ? vendor.packages : [];
+    if (!packages.length) return null;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.13 }}
+        className="bg-gradient-to-br from-[#6A0000] to-[#3A0000] rounded-xl p-6 border border-[#C6A14A]/20 mb-8"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold text-lg">Packages</h3>
+          <span className="text-sm text-[#C6A14A]">{packages.length} available</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {packages.map((pkg: any, idx: number) => (
+            <div key={pkg.name + idx} className="rounded-lg bg-white/5 border border-white/10 p-4 flex flex-col gap-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg font-semibold text-white">{pkg.name || `Package ${idx + 1}`}</span>
+                {pkg.price && <span className="ml-auto px-2 py-1 rounded bg-[#C6A14A]/20 text-[#C6A14A] text-xs font-bold">{formatCurrency(pkg.price)}</span>}
+              </div>
+              {pkg.description && <p className="text-gray-300 text-sm mb-1">{pkg.description}</p>}
+              {pkg.features && Array.isArray(pkg.features) && pkg.features.length > 0 && (
+                <ul className="list-disc list-inside text-gray-400 text-xs mb-1">
+                  {(pkg.features as string[]).map((f: string, i: number) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  };
 
   // Resolve vendorId: prefer URL, else current vendor session
   useEffect(() => {
@@ -74,11 +160,17 @@ export default function VendorStorefront() {
         if (!active) return;
         if (!res.ok) {
           const detail = await res.json().catch(() => ({}));
-          setError(detail?.error || "Unable to load vendor profile");
+          if (res.status === 401) {
+            setError("Sign in to view your private storefront.");
+            setVendor(fallbackVendor);
+          } else {
+            setError(detail?.error || "Unable to load vendor profile");
+          }
           return;
         }
         const data = await res.json();
-        setVendor(data);
+        const picked = Array.isArray(data) ? data.find((v) => v.id === vendorId) || data[0] : data;
+        setVendor(picked || fallbackVendor);
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Failed to load vendor profile");
@@ -91,13 +183,23 @@ export default function VendorStorefront() {
     };
   }, [vendorId]);
 
-  const primaryVenue = vendor?.venues?.[0];
+  const partnerVenues = vendor?.venues || [];
+  const primaryVenue = partnerVenues[0];
+  const vendorLocation = (vendor as any)?.location || primaryVenue?.location;
+  const vendorMapEmbed = (vendor as any)?.mapEmbedUrl || primaryVenue?.mapEmbedUrl;
   const heroImage = primaryVenue?.images?.[0];
-  const gallery = vendor?.venues?.flatMap((v: any, idx: number) => (
-    v.images?.length ? v.images : [gradientPalette[(idx + 1) % gradientPalette.length]]
+  const gallery = partnerVenues.flatMap((v: any, idx: number) => (
+    v?.images?.length ? v.images : [gradientPalette[(idx + 1) % gradientPalette.length]]
   ))?.slice(0, 8) || [];
   const highlights = vendor?.services ? vendor.services.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
-  const mapUrl = primaryVenue?.mapEmbedUrl || (primaryVenue?.location ? `https://www.google.com/maps?q=${encodeURIComponent(primaryVenue.location)}&output=embed` : null);
+  const eventTypes = Array.isArray(vendor?.eventTypes)
+    ? vendor.eventTypes
+    : (vendor?.eventTypes as any)?.split?.(",")?.map((s: string) => s.trim()).filter(Boolean) || [];
+
+  // ...existing code...
+
+  // Place the packages section just before the return
+  const packagesSection = renderPackages();
 
   return (
     <SwipeTransition>
@@ -143,13 +245,16 @@ export default function VendorStorefront() {
                   <h1 className="text-3xl md:text-4xl font-serif text-white mb-2">{vendor?.companyName || "Vendor"}</h1>
                   <div className="flex flex-wrap items-center gap-4 text-gray-200 text-sm">
                     <span className="flex items-center gap-2"><Camera size={16} /> {vendor?.services || "Services"}</span>
-                    <span className="flex items-center gap-2"><MapPin size={16} /> {primaryVenue?.location || "Location"}</span>
+                    <span className="flex items-center gap-2"><MapPin size={16} /> {(vendorLocation || "Vendor location on request")}</span>
                     <span className="flex items-center gap-1 text-[#C6A14A]"><Star size={16} fill="#C6A14A" /> {vendor?.rating ?? "—"}</span>
                     <span className="text-gray-300">({vendor?.reviews ?? 0} reviews)</span>
                   </div>
                 </div>
               </div>
             </motion.div>
+
+            {/* Packages section */}
+            {packagesSection}
 
             {/* Highlights & Actions */}
             <motion.div
@@ -161,8 +266,8 @@ export default function VendorStorefront() {
               <div className="md:col-span-2 rounded-xl p-6 bg-gradient-to-br from-[#6A0000] to-[#3A0000] border border-[#C6A14A]/20 space-y-3">
                 <h2 className="text-white font-semibold text-lg">Why clients choose us</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {(highlights.length ? highlights : ["Reliable vendor", "Transparent pricing", "Fast response"]).map((item) => (
-                    <div key={item} className="flex items-start gap-2 text-gray-200">
+                  {(highlights.length ? highlights : ["Reliable vendor", "Transparent pricing", "Fast response"]).map((item: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2 text-gray-200">
                       <Check size={16} className="text-[#C6A14A]" />
                       <span className="text-sm">{item}</span>
                     </div>
@@ -172,67 +277,83 @@ export default function VendorStorefront() {
                   <p className="text-gray-200 text-sm leading-relaxed">{vendor.description}</p>
                 )}
               </div>
+              {/* Booking/Contact Panel */}
               <div className="rounded-xl p-6 bg-gradient-to-br from-[#1F0A0A] to-[#2C0A0A] border border-[#C6A14A]/20 space-y-3">
-                <h3 className="text-white font-semibold">Get in touch</h3>
-                <p className="text-gray-300 text-sm">Share your date and requirements; we respond within 2 hours.</p>
-                <div className="flex flex-col gap-2 text-sm">
-                  {vendor?.phone && (
-                    <Link href={`tel:${vendor.phone}`} className="flex items-center gap-2 text-[#C6A14A] hover:text-[#E8C56B]">
-                      <Phone size={14} /> {vendor.phone}
-                    </Link>
-                  )}
-                  <Link href={`mailto:${vendor?.user?.email || "hello@example.com"}`} className="flex items-center gap-2 text-[#C6A14A] hover:text-[#E8C56B]">
-                    <Mail size={14} /> {vendor?.user?.email || "hello@example.com"}
-                  </Link>
-                  {vendor?.website && (
-                    <Link href={vendor.website} target="_blank" className="flex items-center gap-2 text-[#C6A14A] hover:text-[#E8C56B]">
-                      <Sparkles size={14} /> {vendor.website}
-                    </Link>
-                  )}
+                <div className="mb-4">
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {vendor?.priceRange || vendor?.startingPrice || "Custom pricing"}
+                  </div>
+                  <p className="text-gray-400 text-sm">Starting price</p>
                 </div>
-                <div className="flex gap-2">
-                  <Link
-                    href="/auth/signup?role=vendor"
-                    className="flex-1 text-center px-4 py-2 bg-[#C6A14A] text-black rounded-lg font-semibold hover:bg-[#E8C56B] transition-colors"
+                <div className="space-y-4 mb-4">
+                  {/* Date Picker */}
+                  <div>
+                    <label className="text-sm text-gray-300 mb-2 block">Event Date</label>
+                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-lg px-3 py-2 border border-white/20">
+                      <Calendar size={18} className="text-[#C6A14A]" />
+                      <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="bg-transparent text-white outline-none flex-1"
+                      />
+                    </div>
+                  </div>
+                  {/* Guest Count */}
+                  <div>
+                    <label className="text-sm text-gray-300 mb-2 block">Number of Guests</label>
+                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-lg px-3 py-2 border border-white/20">
+                      <Users size={18} className="text-[#C6A14A]" />
+                      <input
+                        type="number"
+                        placeholder="500-1000"
+                        value={guestCount}
+                        onChange={(e) => setGuestCount(e.target.value)}
+                        className="bg-transparent text-white placeholder-gray-500 outline-none flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {bookingMessage && (
+                    <div className="text-sm px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-white">{bookingMessage}</div>
+                  )}
+                  <button
+                    onClick={() => submitBooking("visit")}
+                    disabled={bookingLoading}
+                    className="w-full py-3 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors disabled:opacity-60"
                   >
-                    Book a call
-                  </Link>
-                  <button className="px-3 py-2 border border-[#C6A14A]/60 text-[#C6A14A] rounded-lg hover:bg-[#C6A14A]/10 transition-colors">
-                    <Share2 size={16} />
+                    {bookingLoading ? "Sending…" : "Book Site Visit"}
+                  </button>
+                  <button
+                    onClick={() => submitBooking("quote")}
+                    disabled={bookingLoading}
+                    className="w-full py-3 border-2 border-[#C6A14A] text-[#C6A14A] font-semibold rounded-lg hover:bg-[#C6A14A]/10 transition-colors disabled:opacity-60"
+                  >
+                    {bookingLoading ? "Sending…" : "Request Quote"}
+                  </button>
+                  <button
+                    onClick={() => submitBooking("reserve")}
+                    disabled={bookingLoading}
+                    className="w-full py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-60"
+                  >
+                    {bookingLoading ? "Sending…" : "Reserve Now"}
                   </button>
                 </div>
+                <div className="mt-6 pt-6 border-t border-white/20">
+                  <div className="flex items-center gap-2 text-gray-300 text-sm mb-2">
+                    <Shield size={16} className="text-[#C6A14A]" />
+                    <span>Secure payment with escrow</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-300 text-sm">
+                    <Check size={16} className="text-[#C6A14A]" />
+                    <span>Free cancellation up to 30 days</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
 
-            {/* Venue details */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.12 }}
-              className="bg-gradient-to-br from-[#1F0A0A] to-[#2C0A0A] rounded-xl p-6 border border-[#C6A14A]/20 space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-white font-semibold">Venue details</h3>
-                  <p className="text-gray-300 text-sm">Location, pricing, and amenities tailored by the vendor.</p>
-                </div>
-                {primaryVenue?.priceRange && <span className="px-3 py-1 rounded-full bg-[#C6A14A]/15 text-[#C6A14A] text-sm">{formatCurrency(primaryVenue.priceRange)}</span>}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-200">
-                <div className="flex items-center gap-2"><MapPin size={16} /> {primaryVenue?.location || "Add location"}</div>
-                <div className="flex items-center gap-2"><Users size={16} /> {primaryVenue?.capacity ? `${primaryVenue.capacity} guests` : "Flexible capacity"}</div>
-              </div>
-              {primaryVenue?.description && <p className="text-gray-300 text-sm leading-relaxed">{primaryVenue.description}</p>}
-              {!!(primaryVenue?.amenities?.length) && (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {primaryVenue.amenities.map((a: string) => (
-                    <span key={a} className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-white">{a}</span>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-
-            {/* Packages */}
+            {/* Offerings */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -241,8 +362,8 @@ export default function VendorStorefront() {
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-white font-semibold text-lg">Packages</h3>
-                  <span className="text-sm text-gray-300">Custom bundles available</span>
+                  <h3 className="text-white font-semibold text-lg">Services & offerings</h3>
+                  <span className="text-sm text-gray-300">Tailored to your event requirements</span>
                 </div>
                 {me?.vendorProfileId === vendor?.id && (
                   <Link
@@ -254,11 +375,10 @@ export default function VendorStorefront() {
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {(vendor?.venues?.length ? vendor.venues : [{ name: "Standard package", priceRange: "On request", description: vendor?.description || "" }]).map((pkg: any, idx: number) => (
-                  <div key={pkg.id || idx} className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-2">
-                    <p className="text-white font-semibold">{pkg.name || "Package"}</p>
-                    <p className="text-2xl text-[#C6A14A] font-bold">{formatCurrency(pkg.priceRange)}</p>
-                    <p className="text-gray-300 text-sm">{pkg.description || "Tailored to your event needs."}</p>
+                {(highlights.length ? highlights : ["Reliable vendor", "Transparent pricing", "Fast response"]).map((item: string, idx: number) => (
+                  <div key={idx} className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                    <p className="text-white font-semibold">{item}</p>
+                    <p className="text-gray-300 text-sm">We align to your brief and timeline.</p>
                     <button className="w-full mt-2 px-3 py-2 bg-[#C6A14A]/15 text-[#C6A14A] rounded-lg font-semibold hover:bg-[#C6A14A]/25 transition-colors">
                       Request quote
                     </button>
@@ -266,6 +386,89 @@ export default function VendorStorefront() {
                 ))}
               </div>
             </motion.div>
+
+            {/* Event types */}
+            {eventTypes.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.11 }}
+                className="bg-gradient-to-br from-[#1F0A0A] to-[#2C0A0A] rounded-xl p-6 border border-[#C6A14A]/20"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-semibold">Event types we serve</h3>
+                  <span className="text-sm text-[#C6A14A]">{eventTypes.length} listed</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {eventTypes.map((t: string) => (
+                    <span key={t} className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-white text-sm">{t}</span>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Partner venues */}
+            {partnerVenues.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.12 }}
+                className="bg-gradient-to-br from-[#1F0A0A] to-[#2C0A0A] rounded-xl p-6 border border-[#C6A14A]/20 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-semibold">Partner venues</h3>
+                    <p className="text-gray-300 text-sm">Venues this vendor collaborates with.</p>
+                  </div>
+                  <span className="text-sm text-[#C6A14A]">{partnerVenues.length} listed</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {partnerVenues.map((vn: any) => (
+                    <div key={vn.id} className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                      <p className="text-white font-semibold">{vn.name}</p>
+                      <p className="text-gray-300 text-sm flex items-center gap-2"><MapPin size={14} /> {vn.location || "Location on request"}</p>
+                      <p className="text-gray-400 text-xs">Capacity: {vn.capacity || "Flexible"}</p>
+                      <div className="flex gap-2 text-sm">
+                        {vn.id ? (
+                          <Link href={`/venues/${vn.id}`} className="px-3 py-2 bg-[#C6A14A]/15 text-[#C6A14A] rounded-lg border border-[#C6A14A]/30 hover:bg-[#C6A14A]/25 transition-colors">
+                            View venue
+                          </Link>
+                        ) : (
+                          <span className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300">Contact for details</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Vendor location map */}
+            {(vendorMapEmbed || vendorLocation) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="bg-gradient-to-br from-[#6A0000] to-[#3A0000] rounded-xl p-6 border border-[#C6A14A]/20 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-semibold">Location map</h3>
+                    <p className="text-gray-300 text-sm">Vendor office or partner venue location.</p>
+                  </div>
+                  {vendorLocation && <span className="text-sm text-[#C6A14A] flex items-center gap-2"><MapPin size={16} /> {vendorLocation}</span>}
+                </div>
+                <div className="h-72 w-full overflow-hidden rounded-lg border border-white/10">
+                  <iframe
+                    title="Vendor map"
+                    src={vendorMapEmbed || `https://www.google.com/maps?q=${encodeURIComponent(vendorLocation || "")}&output=embed`}
+                    className="w-full h-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              </motion.div>
+            )}
 
             {/* Gallery */}
             <motion.div
@@ -279,7 +482,7 @@ export default function VendorStorefront() {
                 <span className="text-gray-300 text-sm">Featured highlights</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(gallery.length ? gallery : gradientPalette.slice(0, 4)).map((bg, idx) => (
+                {(gallery.length ? gallery : gradientPalette.slice(0, 4)).map((bg: string, idx: number) => (
                   <div
                     key={idx}
                     className={`h-28 rounded-lg relative overflow-hidden ${typeof bg === "string" && bg.startsWith("http") ? "bg-cover bg-center" : typeof bg === "string" ? bg : ""}`}
@@ -292,37 +495,19 @@ export default function VendorStorefront() {
               </div>
             </motion.div>
 
-            {/* Map */}
-            {mapUrl && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="bg-gradient-to-br from-[#6A0000] to-[#3A0000] rounded-xl p-6 border border-[#C6A14A]/20 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-white font-semibold">Location map</h3>
-                    <p className="text-gray-300 text-sm">Preview how guests will find the venue.</p>
-                  </div>
-                  {primaryVenue?.location && <span className="text-sm text-[#C6A14A] flex items-center gap-2"><MapPin size={16} /> {primaryVenue.location}</span>}
-                </div>
-                <div className="h-72 w-full overflow-hidden rounded-lg border border-white/10">
-                  <iframe
-                    title="Venue map"
-                    src={mapUrl}
-                    className="w-full h-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                </div>
-              </motion.div>
-            )}
           </div>
         </div>
 
         <Footer />
       </div>
     </SwipeTransition>
+  );
+}
+
+export default function VendorStorefront() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000]" />}>
+      <VendorStorefrontContent />
+    </Suspense>
   );
 }

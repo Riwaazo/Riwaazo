@@ -1,4 +1,8 @@
-import { Mail, Phone, MapPin, MessageSquare } from "lucide-react";
+"use client";
+
+import { Suspense, useState, FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { Mail, Phone, MapPin, MessageSquare, CheckCircle } from "lucide-react";
 import SwipeTransition from "@/components/layout/SwipeTransition";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
@@ -30,7 +34,44 @@ const contactChannels = [
   },
 ];
 
-export default function ContactPage() {
+function ContactContent() {
+  const searchParams = useSearchParams();
+  const plannerUserId = searchParams.get("plannerUserId");
+  const plannerName = searchParams.get("plannerName");
+
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSending(true);
+    setError("");
+    const fd = new FormData(e.currentTarget);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fd.get("name"),
+          email: fd.get("email"),
+          phone: fd.get("phone"),
+          date: fd.get("date"),
+          eventType: fd.get("eventType"),
+          guests: fd.get("guests"),
+          message: fd.get("message"),
+          ...(plannerUserId ? { plannerUserId } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      setSent(true);
+    } catch {
+      setError("Something went wrong. Please try again or contact us directly.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <SwipeTransition>
       <Navbar />
@@ -40,13 +81,25 @@ export default function ContactPage() {
             <div className="space-y-6">
               <p className="uppercase tracking-[0.3em] text-sm text-[#C6A14A]">Contact</p>
               <h1 className="text-4xl sm:text-5xl font-serif">
-                Tell us about your event.
+                {plannerName ? `Get in touch with ${plannerName}` : "Tell us about your event."}
               </h1>
               <p className="text-gray-300 max-w-2xl">
-                Share your vision and our concierge team will curate the right venues and vendors for you.
+                {plannerName
+                  ? `Fill out the form below and ${plannerName} will receive your inquiry directly.`
+                  : "Share your vision and our concierge team will curate the right venues and vendors for you."}
               </p>
 
-              <form className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 shadow-lg backdrop-blur">
+              {sent ? (
+                <div className="bg-white/5 border border-green-500/30 rounded-2xl p-8 text-center space-y-3">
+                  <CheckCircle className="mx-auto text-green-400" size={48} />
+                  <h2 className="text-2xl font-serif">Inquiry sent!</h2>
+                  <p className="text-gray-300">Our concierge team will get back to you within one business day.</p>
+                  <button onClick={() => setSent(false)} className="text-[#C6A14A] underline text-sm mt-2">
+                    Send another inquiry
+                  </button>
+                </div>
+              ) : (
+              <form onSubmit={handleSubmit} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 shadow-lg backdrop-blur">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="space-y-2 text-sm">
                     <span className="text-gray-200">Full name</span>
@@ -119,11 +172,14 @@ export default function ContactPage() {
                 </label>
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-[#C6A14A] text-black font-semibold px-5 py-3 rounded-lg hover:bg-[#E8C56B] transition-colors"
+                  disabled={sending}
+                  className="w-full sm:w-auto bg-[#C6A14A] text-black font-semibold px-5 py-3 rounded-lg hover:bg-[#E8C56B] transition-colors disabled:opacity-50"
                 >
-                  Send to concierge
+                  {sending ? "Sending…" : "Send to concierge"}
                 </button>
+                {error && <p className="text-red-400 text-sm">{error}</p>}
               </form>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -170,5 +226,13 @@ export default function ContactPage() {
       </main>
       <Footer />
     </SwipeTransition>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000]" />}>
+      <ContactContent />
+    </Suspense>
   );
 }

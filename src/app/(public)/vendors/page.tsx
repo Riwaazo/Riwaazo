@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Star,
@@ -27,73 +27,13 @@ const categories = [
   { id: "planning", name: "Event Planning", icon: Users },
 ];
 
-const vendors = [
-  {
-    id: "1",
-    name: "Royal Catering Services",
-    category: "catering",
-    rating: 4.9,
-    reviews: 156,
-    priceRange: "₹800-1500/plate",
-    location: "New Delhi",
-    image: "bg-gradient-to-br from-[#9B0000] to-[#6A0000]",
-    verified: true,
-  },
-  {
-    id: "2",
-    name: "Lens & Light Photography",
-    category: "photography",
-    rating: 4.8,
-    reviews: 203,
-    priceRange: "₹50,000-2L",
-    location: "Mumbai",
-    image: "bg-gradient-to-br from-[#8B0000] to-[#5A0000]",
-    verified: true,
-  },
-  {
-    id: "3",
-    name: "Elegant Decor Studio",
-    category: "decor",
-    rating: 4.7,
-    reviews: 142,
-    priceRange: "₹1L-5L",
-    location: "Bangalore",
-    image: "bg-gradient-to-br from-[#7A0000] to-[#4A0000]",
-    verified: true,
-  },
-  {
-    id: "4",
-    name: "Beats & Rhythm DJ Services",
-    category: "dj",
-    rating: 4.9,
-    reviews: 98,
-    priceRange: "₹25,000-75,000",
-    location: "Hyderabad",
-    image: "bg-gradient-to-br from-[#8B1010] to-[#5A0010]",
-    verified: false,
-  },
-  {
-    id: "5",
-    name: "Glam Beauty Studio",
-    category: "makeup",
-    rating: 4.8,
-    reviews: 187,
-    priceRange: "₹15,000-50,000",
-    location: "Chennai",
-    image: "bg-gradient-to-br from-[#9A0000] to-[#6A0000]",
-    verified: true,
-  },
-  {
-    id: "6",
-    name: "Perfect Events Planner",
-    category: "planning",
-    rating: 4.9,
-    reviews: 234,
-    priceRange: "₹50,000-3L",
-    location: "Pune",
-    image: "bg-gradient-to-br from-[#7A0000] to-[#5A0000]",
-    verified: true,
-  },
+const gradients = [
+  "bg-gradient-to-br from-[#9B0000] to-[#6A0000]",
+  "bg-gradient-to-br from-[#8B0000] to-[#5A0000]",
+  "bg-gradient-to-br from-[#7A0000] to-[#4A0000]",
+  "bg-gradient-to-br from-[#8B1010] to-[#5A0010]",
+  "bg-gradient-to-br from-[#9A0000] to-[#6A0000]",
+  "bg-gradient-to-br from-[#7A0000] to-[#5A0000]",
 ];
 
 export default function VendorsList() {
@@ -101,18 +41,68 @@ export default function VendorsList() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const locations = ["all", "New Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai", "Pune"];
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/vendors?public=1", { cache: "no-store" });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail?.error || "Failed to load vendors");
+        }
+        const data = await res.json();
+        if (!active) return;
+        const mapped = (Array.isArray(data) ? data : []).map((v: any, idx: number) => {
+          const venueImages = Array.isArray(v.venues) ? v.venues.flatMap((vn: any) => vn.images || []) : [];
+          const image = venueImages[0];
+          const location = v.location || v.venues?.[0]?.location || "Location TBD";
+          const categoryMatch = categories.find((c) =>
+            (v.services || "").toLowerCase().includes(c.name.toLowerCase()) ||
+            (Array.isArray(v.eventTypes) && v.eventTypes.some((e: string) => e.toLowerCase().includes(c.id)))
+          );
+          return {
+            id: v.id,
+            name: v.companyName || v.user?.name || "Vendor",
+            category: categoryMatch?.id || "all",
+            rating: v.rating || "—",
+            reviews: v.reviewCount || 0,
+            priceRange: v.services?.length ? undefined : "On request",
+            location,
+            image: image || gradients[idx % gradients.length],
+            verified: v.status === "APPROVED",
+            services: v.services,
+            eventTypes: v.eventTypes || [],
+          };
+        });
+        setVendors(mapped);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load vendors");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const locations = useMemo(() => {
+    const set = new Set<string>();
+    vendors.forEach((v) => v.location && set.add(v.location));
+    return ["all", ...Array.from(set)];
+  }, [vendors]);
 
   const filteredVendors = vendors.filter((vendor) => {
-    const matchesSearch = vendor.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || vendor.category === selectedCategory;
-    const matchesLocation =
-      selectedLocation === "all" || vendor.location === selectedLocation;
-
+    const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || vendor.category === selectedCategory;
+    const matchesLocation = selectedLocation === "all" || vendor.location === selectedLocation;
     return matchesSearch && matchesCategory && matchesLocation;
   });
 
@@ -134,8 +124,9 @@ export default function VendorsList() {
                 Find Your Perfect <span className="text-[#C6A14A]">Vendors</span>
               </h1>
               <p className="text-gray-400 max-w-2xl mx-auto">
-                Connect with verified professionals for your special event
-              </p>
+                  Connect with verified professionals for your special event
+                  {error && <span className="text-red-300"> · {error}</span>}
+                </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   href="/vendors/join"
@@ -259,6 +250,8 @@ export default function VendorsList() {
             >
               <p className="text-gray-400">
                 Showing <span className="text-[#C6A14A] font-semibold">{filteredVendors.length}</span> vendors
+                {loading && " (loading...)"}
+                {error && <span className="text-red-300"> · {error}</span>}
               </p>
             </motion.div>
 
@@ -275,7 +268,10 @@ export default function VendorsList() {
                     <div className="group cursor-pointer">
                       <div className="bg-gradient-to-br from-[#8B0000] to-[#5A0000] rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#C6A14A]/20 transition-all duration-300 border border-[#C6A14A]/20">
                         {/* Image */}
-                        <div className={`h-48 ${vendor.image} relative overflow-hidden`}>
+                        <div
+                          className={`h-48 relative overflow-hidden ${vendor.image.startsWith("http") ? "bg-cover bg-center" : vendor.image}`}
+                          style={vendor.image.startsWith("http") ? { backgroundImage: `url(${vendor.image})` } : undefined}
+                        >
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                           {vendor.verified && (
                             <div className="absolute top-4 right-4 bg-[#C6A14A] text-black px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -283,9 +279,11 @@ export default function VendorsList() {
                               Verified
                             </div>
                           )}
-                          <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs capitalize">
-                            {categories.find((c) => c.id === vendor.category)?.name}
-                          </div>
+                          {vendor.category !== "all" && (
+                            <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs capitalize">
+                              {categories.find((c) => c.id === vendor.category)?.name}
+                            </div>
+                          )}
                         </div>
 
                         {/* Content */}
@@ -319,12 +317,21 @@ export default function VendorsList() {
                           <div className="border-t border-gray-700 pt-4">
                             <div className="flex items-center justify-between">
                               <span className="text-gray-400 text-sm">
-                                Price Range
+                                Services
                               </span>
-                              <span className="text-[#C6A14A] font-semibold">
-                                {vendor.priceRange}
+                              <span className="text-[#C6A14A] font-semibold truncate max-w-[60%]">
+                                {vendor.services || "On request"}
                               </span>
                             </div>
+                            {vendor.eventTypes?.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {vendor.eventTypes.slice(0, 3).map((et: string) => (
+                                  <span key={et} className="text-xs text-gray-300 bg-white/5 px-2 py-1 rounded-full border border-white/10">
+                                    {et}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

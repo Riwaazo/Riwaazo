@@ -17,6 +17,10 @@ import {
   ListChecks,
   MapPin,
   MessageSquare,
+  Paperclip,
+  Image as ImageIcon,
+  Link2,
+  X,
   PhoneCall,
   Plus,
   Send,
@@ -123,6 +127,7 @@ export default function Dashboard() {
     | "overview"
     | "events"
     | "favorites"
+    | "bookings"
     | "messages"
     | "calendar"
     | "tasks"
@@ -163,6 +168,16 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<
     { id: string; from: string; subject: string; preview: string; time: string; unread: boolean }[]
   >([]);
+
+  const [threadMessages, setThreadMessages] = useState<Record<string, any[]>>({});
+  const [threadLoading, setThreadLoading] = useState<Record<string, boolean>>({});
+  const [threadError, setThreadError] = useState<Record<string, string | null>>({});
+  const [threadInput, setThreadInput] = useState<Record<string, string>>({});
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [msgAttachments, setMsgAttachments] = useState<Record<string, Array<{ type: string; url: string }>>>({});
+  const [showMsgAttachForm, setShowMsgAttachForm] = useState<Record<string, boolean>>({});
+  const [msgAttachUrl, setMsgAttachUrl] = useState("");
+  const [msgAttachType, setMsgAttachType] = useState("image");
 
   const [tasks, setTasks] = useState<
     { id: string; title: string; due: string; owner: string; status: "Open" | "Done"; priority: "High" | "Medium" | "Low" }[]
@@ -215,41 +230,18 @@ export default function Dashboard() {
       case "VENUE":
         return bookingsData.filter((b) => b.venue?.ownerId === user.id);
       default:
-        return bookingsData.filter((b) => b.userId === user.id || b.user?.id === user.id);
+        return bookingsData.filter(
+          (b) =>
+            b.userId === user.id ||
+            b.user?.id === user.id ||
+            (!!user.email && b.user && (b.user as any).email === user.email)
+        );
     }
   }, [bookingsData, user]);
 
-  const filteredVenues = useMemo(() => {
-    if (!user.id) return venuesData;
-    switch (user.role) {
-      case "ADMIN":
-        return venuesData;
-      case "VENDOR":
-        return venuesData.filter(
-          (v) => v.vendorId === user.vendorProfileId || v.ownerId === user.id || v.vendor?.user?.id === user.id
-        );
-      case "VENUE":
-        return venuesData.filter((v) => v.ownerId === user.id);
-      default: {
-        const scoped = venuesData.filter((v) => filteredBookings.some((b) => b.venue?.id === v.id));
-        return scoped.length > 0 ? scoped : venuesData;
-      }
-    }
-  }, [venuesData, user, filteredBookings]);
+  const filteredVenues = useMemo(() => venuesData, [venuesData]);
 
-  const filteredVendors = useMemo(() => {
-    if (!user.id) return vendorsData;
-    switch (user.role) {
-      case "ADMIN":
-        return vendorsData;
-      case "VENDOR":
-        return vendorsData.filter((v) => v.id === user.vendorProfileId || v.user?.id === user.id);
-      default: {
-        const scoped = vendorsData.filter((v) => filteredBookings.some((b) => b.vendor?.id === v.id));
-        return scoped.length > 0 ? scoped : vendorsData;
-      }
-    }
-  }, [vendorsData, user, filteredBookings]);
+  const filteredVendors = useMemo(() => vendorsData, [vendorsData]);
 
   const visibleVenues = useMemo(
     () => filteredVenues.filter((v) => !removedVenueIds.has(v.id)),
@@ -498,7 +490,7 @@ export default function Dashboard() {
             fetch("/api/events", { cache: "no-store" }),
             fetch("/api/venues", { cache: "no-store" }),
             fetch("/api/vendors", { cache: "no-store" }),
-            fetch("/api/bookings", { cache: "no-store" }),
+            fetch("/api/bookings", { cache: "no-store", credentials: "include" }),
             fetch("/api/tasks", { cache: "no-store" }),
             fetch("/api/messages", { cache: "no-store" }),
             fetch("/api/notifications", { cache: "no-store" }),
@@ -537,9 +529,9 @@ export default function Dashboard() {
               title: t.title,
               due: t.due || new Date().toISOString(),
               owner: t.owner || user.name || "You",
-              status: t.status === "DONE" ? "Done" : "Open",
+              status: (t.status === "DONE" ? "Done" : "Open") as "Open" | "Done",
               priority:
-                t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium",
+                (t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium") as "High" | "Medium" | "Low",
             }))
           : [];
 
@@ -624,15 +616,15 @@ export default function Dashboard() {
                 title: saved.title,
                 due: saved.due || task.due,
                 owner: saved.owner || task.owner,
-                status: saved.status === "DONE" ? "Done" : "Open",
-                priority: saved.priority === "HIGH" ? "High" : saved.priority === "LOW" ? "Low" : "Medium",
+                status: (saved.status === "DONE" ? "Done" : "Open") as "Open" | "Done",
+                priority: (saved.priority === "HIGH" ? "High" : saved.priority === "LOW" ? "Low" : "Medium") as "High" | "Medium" | "Low",
               };
             })
           );
           setTasks(created);
         } catch (err) {
           console.error(err);
-          setTasks(derivedTasks);
+          setTasks(derivedTasks as typeof tasks);
         }
       })();
     }
@@ -818,8 +810,72 @@ export default function Dashboard() {
     }).catch((err) => console.error("Failed to mark notification read", err));
   };
 
+  const loadThread = async (bookingId: string) => {
+    setThreadLoading((prev) => ({ ...prev, [bookingId]: true }));
+    setThreadError((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const res = await fetch(`/api/bookings/messages?bookingId=${bookingId}`, { credentials: "include", cache: "no-store" });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail?.error || "Failed to load messages");
+      }
+      const json = await res.json();
+      setThreadMessages((prev) => ({ ...prev, [bookingId]: Array.isArray(json) ? json : [] }));
+    } catch (err) {
+      setThreadError((prev) => ({ ...prev, [bookingId]: err instanceof Error ? err.message : "Failed to load messages" }));
+    } finally {
+      setThreadLoading((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
+  const sendThreadMessage = async (bookingId: string) => {
+    const content = (threadInput[bookingId] || "").trim();
+    if (!content) return;
+    setThreadLoading((prev) => ({ ...prev, [bookingId]: true }));
+    setThreadError((prev) => ({ ...prev, [bookingId]: null }));
+    try {
+      const payload: any = { bookingId, content };
+      const atts = msgAttachments[bookingId];
+      if (atts?.length) payload.attachments = atts;
+      const res = await fetch("/api/bookings/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail?.error || "Failed to send message");
+      }
+      const json = await res.json();
+      setThreadMessages((prev) => ({ ...prev, [bookingId]: [...(prev[bookingId] || []), json] }));
+      setThreadInput((prev) => ({ ...prev, [bookingId]: "" }));
+      setMsgAttachments((prev) => ({ ...prev, [bookingId]: [] }));
+    } catch (err) {
+      setThreadError((prev) => ({ ...prev, [bookingId]: err instanceof Error ? err.message : "Failed to send message" }));
+    } finally {
+      setThreadLoading((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
   const togglePreference = (key: keyof typeof preferences) =>
     setPreferences((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // Auto-poll active thread for new messages every 5 seconds
+  useEffect(() => {
+    if (!activeThreadId) return;
+    const interval = setInterval(() => {
+      fetch(`/api/bookings/messages?bookingId=${activeThreadId}`, { credentials: "include", cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setThreadMessages((prev) => ({ ...prev, [activeThreadId]: data }));
+          }
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeThreadId]);
 
   const updateProfile = (key: keyof typeof profile, value: string) =>
     setProfile((prev) => ({ ...prev, [key]: value }));
@@ -923,7 +979,7 @@ export default function Dashboard() {
               className="mb-8"
             >
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {["overview", "events", "favorites", "messages", "calendar", "tasks", "budget", "notifications", "settings", "profile"].map(
+                {["overview", "events", "favorites", "bookings", "messages", "calendar", "tasks", "budget", "notifications", "settings", "profile"].map(
                   (tab) => (
                     <button
                       key={tab}
@@ -1315,6 +1371,129 @@ export default function Dashboard() {
               </motion.div>
             )}
 
+            {/* Bookings Tab */}
+            {activeTab === "bookings" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="bg-gradient-to-br from-[#1F0A0A] to-[#2C0A0A] rounded-xl p-6 border border-[#C6A14A]/20 space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-serif text-white">My Bookings</h2>
+                  <span className="text-sm text-gray-300">{filteredBookings.length} bookings</span>
+                </div>
+                {filteredBookings.length === 0 && <p className="text-gray-400">No bookings yet.</p>}
+                <div className="space-y-4">
+                  {filteredBookings.map((booking) => (
+                    <div key={booking.id} className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <p className="text-white font-semibold text-lg">{booking.venue?.name || "Venue"}</p>
+                          <p className="text-gray-300 text-sm">{booking.venue?.location || "Location"} · {new Date(booking.eventDate).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</p>
+                          {booking.vendor && <p className="text-gray-400 text-xs mt-1">Vendor: {(booking.vendor as any).companyName || "—"}</p>}
+                          <span className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs border ${booking.status === "CONFIRMED" ? "border-green-500/30 text-green-300 bg-green-500/10" : booking.status === "CANCELLED" ? "border-red-500/30 text-red-300 bg-red-500/10" : "border-[#C6A14A]/30 text-[#C6A14A] bg-[#C6A14A]/10"}`}>{booking.status}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const next = activeThreadId === booking.id ? null : booking.id;
+                            setActiveThreadId(next);
+                            if (next && !threadMessages[booking.id] && !threadLoading[booking.id]) {
+                              loadThread(booking.id);
+                            }
+                          }}
+                          className="self-start px-4 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors flex items-center gap-2"
+                        >
+                          <MessageSquare size={16} />
+                          {activeThreadId === booking.id ? "Hide messages" : "Messages"}
+                        </button>
+                      </div>
+
+                      {activeThreadId === booking.id && (
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-4 space-y-3">
+                          {threadError[booking.id] && (
+                            <div className="text-xs text-red-200">{threadError[booking.id]}</div>
+                          )}
+                          <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                            {(threadMessages[booking.id] || []).map((msg) => {
+                              const ts = msg.createdAt ? new Date(msg.createdAt) : null;
+                              const msgAtts = Array.isArray(msg.attachments) ? msg.attachments : [];
+                              return (
+                                <div key={msg.id} className="text-sm text-gray-100">
+                                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 capitalize">{(msg.senderRole || "guest").toLowerCase()}</span>
+                                    {ts && <span>{ts.toLocaleString()}</span>}
+                                  </div>
+                                  <p className="mt-1 text-white">{msg.content}</p>
+                                  {msgAtts.map((att: any, ai: number) => (
+                                    <div key={ai} className="mt-1">
+                                      {att.type === "image" && <img src={att.url} alt="attachment" className="max-w-full max-h-32 rounded" />}
+                                      {att.type === "video" && <video src={att.url} controls className="max-w-full max-h-32 rounded" />}
+                                      {att.type === "link" && <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline break-all text-xs">{att.url}</a>}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                            {threadLoading[booking.id] && <div className="text-xs text-gray-300">Loading messages…</div>}
+                            {!threadLoading[booking.id] && (threadMessages[booking.id] || []).length === 0 && (
+                              <div className="text-xs text-gray-300">No messages yet. Send the first message!</div>
+                            )}
+                          </div>
+                          {/* Attachment preview */}
+                          {(msgAttachments[booking.id] || []).length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {(msgAttachments[booking.id] || []).map((att, ai) => (
+                                <span key={ai} className="flex items-center gap-1 bg-white/10 text-white text-xs px-2 py-1 rounded-lg border border-white/20">
+                                  {att.type === "image" && <ImageIcon size={12} />}
+                                  {att.type === "video" && <span className="text-[10px]">VID</span>}
+                                  {att.type === "link" && <Link2 size={12} />}
+                                  <span className="max-w-[100px] truncate">{att.url}</span>
+                                  <button onClick={() => setMsgAttachments((p) => { const a = [...(p[booking.id] || [])]; a.splice(ai, 1); return { ...p, [booking.id]: a }; })} className="text-red-300 hover:text-red-100"><X size={12} /></button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Attachment form */}
+                          {showMsgAttachForm[booking.id] && (
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-2">
+                              <select className="bg-transparent border border-white/20 rounded px-2 py-1 text-xs text-white" value={msgAttachType} onChange={(e) => setMsgAttachType(e.target.value)}>
+                                <option className="bg-[#0B0B14]" value="image">Image</option>
+                                <option className="bg-[#0B0B14]" value="video">Video</option>
+                                <option className="bg-[#0B0B14]" value="link">Link</option>
+                              </select>
+                              <input className="flex-1 bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none" placeholder="Paste URL…" value={msgAttachUrl} onChange={(e) => setMsgAttachUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { if (msgAttachUrl.trim()) { setMsgAttachments((p) => ({ ...p, [booking.id]: [...(p[booking.id] || []), { type: msgAttachType, url: msgAttachUrl.trim() }] })); setMsgAttachUrl(""); setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false })); } } }} />
+                              <button onClick={() => { if (msgAttachUrl.trim()) { setMsgAttachments((p) => ({ ...p, [booking.id]: [...(p[booking.id] || []), { type: msgAttachType, url: msgAttachUrl.trim() }] })); setMsgAttachUrl(""); setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false })); } }} className="text-xs px-2 py-1 bg-[#C6A14A] text-black rounded font-semibold">Add</button>
+                              <button onClick={() => setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false }))} className="text-gray-400 hover:text-white"><X size={14} /></button>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setShowMsgAttachForm((p) => ({ ...p, [booking.id]: !p[booking.id] }))} className="p-2 text-gray-300 hover:text-[#C6A14A] transition-colors" title="Attach image, video, or link">
+                              <Paperclip size={16} />
+                            </button>
+                            <input
+                              className="flex-1 bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-white focus:outline-none"
+                              placeholder="Type a message…"
+                              value={threadInput[booking.id] || ""}
+                              onChange={(e) => setThreadInput((prev) => ({ ...prev, [booking.id]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendThreadMessage(booking.id); } }}
+                            />
+                            <button
+                              onClick={() => sendThreadMessage(booking.id)}
+                              disabled={threadLoading[booking.id]}
+                              className="px-4 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors disabled:opacity-60"
+                            >
+                              <Send size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Messages Tab */}
             {activeTab === "messages" && (
               <motion.div
@@ -1373,6 +1552,120 @@ export default function Dashboard() {
                       </div>
                     ))
                   )}
+                </div>
+
+                <div className="pt-4 border-t border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-semibold">Booking conversations</h3>
+                    <span className="text-xs text-gray-300">{filteredBookings.length} bookings</span>
+                  </div>
+                  {filteredBookings.length === 0 && <p className="text-sm text-gray-400">No bookings yet.</p>}
+                  {filteredBookings.map((booking) => (
+                    <div key={booking.id} className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <p className="text-white font-semibold">{booking.venue?.name || "Venue"}</p>
+                          <p className="text-gray-300 text-sm">{booking.venue?.location || "Location"} · {new Date(booking.eventDate).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</p>
+                          <span className="inline-flex mt-1 px-3 py-1 rounded-full text-xs border border-white/20 text-[#C6A14A]">{booking.status}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const next = activeThreadId === booking.id ? null : booking.id;
+                            setActiveThreadId(next);
+                            if (next && !threadMessages[booking.id] && !threadLoading[booking.id]) {
+                              loadThread(booking.id);
+                            }
+                          }}
+                          className="px-3 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors"
+                        >
+                          {activeThreadId === booking.id ? "Hide" : "Open"} messages
+                        </button>
+                      </div>
+
+                      {activeThreadId === booking.id && (
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-2">
+                          {threadError[booking.id] && (
+                            <div className="text-xs text-red-200">{threadError[booking.id]}</div>
+                          )}
+                          <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                            {(threadMessages[booking.id] || []).map((msg) => {
+                              const ts = msg.createdAt ? new Date(msg.createdAt) : null;
+                              const msgAtts = Array.isArray(msg.attachments) ? msg.attachments : [];
+                              return (
+                                <div key={msg.id} className="text-sm text-gray-100">
+                                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 capitalize">{(msg.senderRole || "guest").toLowerCase()}</span>
+                                    {ts && <span>{ts.toLocaleString()}</span>}
+                                  </div>
+                                  <p className="mt-1 text-white">{msg.content}</p>
+                                  {msgAtts.map((att: any, ai: number) => (
+                                    <div key={ai} className="mt-1">
+                                      {att.type === "image" && <img src={att.url} alt="attachment" className="max-w-full max-h-32 rounded" />}
+                                      {att.type === "video" && <video src={att.url} controls className="max-w-full max-h-32 rounded" />}
+                                      {att.type === "link" && <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline break-all text-xs">{att.url}</a>}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                            {threadLoading[booking.id] && <div className="text-xs text-gray-300">Loading messages…</div>}
+                            {!threadLoading[booking.id] && (threadMessages[booking.id] || []).length === 0 && (
+                              <div className="text-xs text-gray-300">No messages yet.</div>
+                            )}
+                          </div>
+                          {/* Attachment preview */}
+                          {(msgAttachments[booking.id] || []).length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {(msgAttachments[booking.id] || []).map((att, ai) => (
+                                <span key={ai} className="flex items-center gap-1 bg-white/10 text-white text-xs px-2 py-1 rounded-lg border border-white/20">
+                                  {att.type === "image" && <ImageIcon size={12} />}
+                                  {att.type === "video" && <span className="text-[10px]">VID</span>}
+                                  {att.type === "link" && <Link2 size={12} />}
+                                  <span className="max-w-[100px] truncate">{att.url}</span>
+                                  <button onClick={() => setMsgAttachments((p) => { const a = [...(p[booking.id] || [])]; a.splice(ai, 1); return { ...p, [booking.id]: a }; })} className="text-red-300 hover:text-red-100"><X size={12} /></button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Attachment form */}
+                          {showMsgAttachForm[booking.id] && (
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-2">
+                              <select className="bg-transparent border border-white/20 rounded px-2 py-1 text-xs text-white" value={msgAttachType} onChange={(e) => setMsgAttachType(e.target.value)}>
+                                <option className="bg-[#0B0B14]" value="image">Image</option>
+                                <option className="bg-[#0B0B14]" value="video">Video</option>
+                                <option className="bg-[#0B0B14]" value="link">Link</option>
+                              </select>
+                              <input className="flex-1 bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none" placeholder="Paste URL…" value={msgAttachUrl} onChange={(e) => setMsgAttachUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { if (msgAttachUrl.trim()) { setMsgAttachments((p) => ({ ...p, [booking.id]: [...(p[booking.id] || []), { type: msgAttachType, url: msgAttachUrl.trim() }] })); setMsgAttachUrl(""); setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false })); } } }} />
+                              <button onClick={() => { if (msgAttachUrl.trim()) { setMsgAttachments((p) => ({ ...p, [booking.id]: [...(p[booking.id] || []), { type: msgAttachType, url: msgAttachUrl.trim() }] })); setMsgAttachUrl(""); setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false })); } }} className="text-xs px-2 py-1 bg-[#C6A14A] text-black rounded font-semibold">Add</button>
+                              <button onClick={() => setShowMsgAttachForm((p) => ({ ...p, [booking.id]: false }))} className="text-gray-400 hover:text-white"><X size={14} /></button>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setShowMsgAttachForm((p) => ({ ...p, [booking.id]: !p[booking.id] }))} className="p-2 text-gray-300 hover:text-[#C6A14A] transition-colors" title="Attach image, video, or link">
+                              <Paperclip size={16} />
+                            </button>
+                            <input
+                              className="flex-1 bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-white focus:outline-none"
+                              placeholder="Type a message"
+                              value={threadInput[booking.id] || ""}
+                              onChange={(e) => setThreadInput((prev) => ({ ...prev, [booking.id]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendThreadMessage(booking.id); } }}
+                              onFocus={() => {
+                                if (!threadMessages[booking.id] && !threadLoading[booking.id]) loadThread(booking.id);
+                              }}
+                            />
+                            <button
+                              onClick={() => sendThreadMessage(booking.id)}
+                              disabled={threadLoading[booking.id]}
+                              className="px-3 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors disabled:opacity-60"
+                            >
+                              Send
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             )}

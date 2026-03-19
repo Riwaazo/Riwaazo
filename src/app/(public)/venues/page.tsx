@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -15,89 +15,71 @@ import SwipeTransition from "@/components/layout/SwipeTransition";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 
-const venues = [
-  {
-    id: "1",
-    name: "Royal Palace Heritage",
-    location: "New Delhi",
-    price: 500000,
-    rating: 4.9,
-    reviews: 128,
-    capacity: "500-1000",
-    type: "indoor",
-    image: "bg-gradient-to-br from-[#8B0000] to-[#5A0000]",
-  },
-  {
-    id: "2",
-    name: "Garden Vista Luxury",
-    location: "Mumbai",
-    price: 450000,
-    rating: 4.8,
-    reviews: 95,
-    capacity: "300-600",
-    type: "outdoor",
-    image: "bg-gradient-to-br from-[#7A0000] to-[#4A0000]",
-  },
-  {
-    id: "3",
-    name: "Metropolitan Elegance",
-    location: "Bangalore",
-    price: 380000,
-    rating: 4.7,
-    reviews: 87,
-    capacity: "200-400",
-    type: "indoor",
-    image: "bg-gradient-to-br from-[#9B0000] to-[#5A0000]",
-  },
-  {
-    id: "4",
-    name: "Lake Side Manor",
-    location: "Hyderabad",
-    price: 420000,
-    rating: 4.9,
-    reviews: 112,
-    capacity: "400-800",
-    type: "outdoor",
-    image: "bg-gradient-to-br from-[#8B0000] to-[#6A0000]",
-  },
-  {
-    id: "5",
-    name: "Grand Ballroom",
-    location: "Chennai",
-    price: 550000,
-    rating: 4.8,
-    reviews: 104,
-    capacity: "600-1200",
-    type: "indoor",
-    image: "bg-gradient-to-br from-[#9A0000] to-[#6A0000]",
-  },
-  {
-    id: "6",
-    name: "Sunset Gardens",
-    location: "Pune",
-    price: 350000,
-    rating: 4.6,
-    reviews: 78,
-    capacity: "250-500",
-    type: "outdoor",
-    image: "bg-gradient-to-br from-[#7A0000] to-[#5A0000]",
-  },
+const gradientPalette = [
+  "bg-gradient-to-br from-[#8B0000] to-[#5A0000]",
+  "bg-gradient-to-br from-[#7A0000] to-[#4A0000]",
+  "bg-gradient-to-br from-[#9B0000] to-[#5A0000]",
+  "bg-gradient-to-br from-[#8B0000] to-[#6A0000]",
+  "bg-gradient-to-br from-[#9A0000] to-[#6A0000]",
 ];
 
 export default function VenuesList() {
+  const [venues, setVenues] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  const cities = ["all", "New Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai", "Pune"];
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/venues", { cache: "no-store" });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail?.error || "Failed to load venues");
+        }
+        const data = await res.json();
+        if (!active) return;
+        const mapped = (Array.isArray(data) ? data : []).map((v: any, idx: number) => {
+          const images = Array.isArray(v.images) ? v.images : [];
+          const fallback = gradientPalette[idx % gradientPalette.length];
+          return {
+            ...v,
+            image: images[0] || fallback,
+            rating: v.rating || "—",
+            reviews: v.reviewCount || 0,
+            capacityLabel: v.capacity ? `${v.capacity}` : "Capacity TBD",
+            type: v.type || "all",
+            priceLabel: v.priceRange || "On request",
+          };
+        });
+        setVenues(mapped);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load venues");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    venues.forEach((v) => v.location && set.add(v.location));
+    return ["all", ...Array.from(set)];
+  }, [venues]);
   const types = ["all", "indoor", "outdoor"];
   const priceRanges = [
     { label: "All Prices", value: "all" },
-    { label: "Under ₹4L", value: "0-400000" },
-    { label: "₹4L - ₹5L", value: "400000-500000" },
-    { label: "Above ₹5L", value: "500000-999999999" },
   ];
 
   const filteredVenues = venues.filter((venue) => {
@@ -107,13 +89,9 @@ export default function VenuesList() {
     const matchesCity =
       selectedCity === "all" || venue.location === selectedCity;
     const matchesType =
-      selectedType === "all" || venue.type === selectedType;
+      selectedType === "all" || (venue.type || "all") === selectedType;
     
-    let matchesPrice = true;
-    if (priceRange !== "all") {
-      const [min, max] = priceRange.split("-").map(Number);
-      matchesPrice = venue.price >= min && venue.price <= max;
-    }
+    const matchesPrice = true;
 
     return matchesSearch && matchesCity && matchesType && matchesPrice;
   });
@@ -260,6 +238,8 @@ export default function VenuesList() {
             >
               <p className="text-gray-400">
                 Showing <span className="text-[#C6A14A] font-semibold">{filteredVenues.length}</span> venues
+                {loading && " (loading...)"}
+                {error && <span className="text-red-300"> · {error}</span>}
               </p>
             </motion.div>
 
@@ -276,13 +256,15 @@ export default function VenuesList() {
                     <div className="group cursor-pointer">
                       <div className="bg-gradient-to-br from-[#8B0000] to-[#5A0000] rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#C6A14A]/20 transition-all duration-300 border border-[#C6A14A]/20">
                         {/* Image */}
-                        <div className={`h-48 ${venue.image} relative overflow-hidden`}>
+                        <div className={`h-48 relative overflow-hidden ${venue.image.startsWith("http") ? "bg-cover bg-center" : venue.image}`}
+                          style={venue.image.startsWith("http") ? { backgroundImage: `url(${venue.image})` } : undefined}
+                        >
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                           <div className="absolute top-4 right-4 bg-[#C6A14A] text-black px-3 py-1 rounded-full text-sm font-semibold">
-                            {venue.capacity}
+                            {venue.capacityLabel}
                           </div>
                           <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs capitalize">
-                            {venue.type}
+                            {venue.type === "all" ? "venue" : venue.type}
                           </div>
                         </div>
 
@@ -321,7 +303,7 @@ export default function VenuesList() {
                                 Starting from
                               </span>
                               <span className="text-[#C6A14A] font-semibold text-lg">
-                                ₹{(venue.price / 100000).toFixed(1)}L
+                                {venue.priceLabel}
                               </span>
                             </div>
                           </div>
