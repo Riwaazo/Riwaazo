@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Riwaazo
 
-## Getting Started
+Riwaazo is a digital event infrastructure platform offering marketplace discovery, vendor CRM, workflow automation, and AI-powered event execution tools. Built with Next.js (App Router), TypeScript, Tailwind, Prisma, and Supabase Auth/Postgres.
 
-First, run the development server:
+## Quick start
 
 ```bash
+npm install
+npx prisma migrate dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App runs at http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env` (if present) and set:
 
-## Learn More
+- `DATABASE_URL` (Postgres/Supabase)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (only for server actions/edge if required)
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev` — start dev server
+- `npm run build` — production build
+- `npm run start` — run compiled app
+- `npm run lint` — lint
+- `npx prisma migrate dev` — apply migrations locally
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Features (current)
 
-## Deploy on Vercel
+- Admin panel: vendor/venue approvals with status + notifications; booking status updates with notifications
+- Auth via Supabase (roles: admin/vendor/venue/event-planner/user)
+- Marketplace pages for vendors/venues; dashboards per role
+- Prisma schema synced to migrations in `prisma/migrations`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Standard Next.js build. Ensure env values are set in the target environment and run `npx prisma migrate deploy` before starting the server.
