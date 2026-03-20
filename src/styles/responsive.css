@@ -1,0 +1,196 @@
+/* Mobile-first responsive design utilities */
+
+/* Ensure proper text scaling on mobile */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
+  /* Ensure touch targets are at least 44x44px */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better spacing on mobile */
+  .px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Prevent horizontal overflow */
+  body,
+  html {
+    overflow-x: hidden;
+  }
+}
+
+/* Tablet optimizations (640px to 1024px) */
+@media (min-width: 640px) and (max-width: 1024px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  header {
+    padding: 0.5rem 0;
+  }
+
+  nav {
+    padding: 0.5rem 0;
+  }
+
+  .pt-20 {
+    padding-top: 4rem;
+  }
+
+  .py-16 {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+/* Large screens */
+@media (min-width: 1920px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+
+/* Improved mobile modal/dialog handling */
+@media (max-width: 640px) {
+  .modal-dialog,
+  dialog {
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+}
+
+/* Better input focus states for mobile */
+@media (hover: none) and (pointer: coarse) {
+  button:active,
+  a:active {
+    opacity: 0.8;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid #C6A14A;
+    outline-offset: 2px;
+  }
+}
+
+/* Ensure images are responsive */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Better table scrolling on mobile */
+@media (max-width: 640px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  table thead {
+    display: block;
+  }
+
+  table tbody {
+    display: block;
+  }
+}
+
+/* Prevent zoom on double-tap in iOS */
+button,
+a,
+input {
+  -webkit-touch-callout: none;
+}
+
+/* Better scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Fix common small screen issues */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .show-on-mobile {
+    display: block !important;
+  }
+
+  /* Better spacing on mobile cards */
+  .card,
+  .rounded-xl {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Improve button spacing */
+  button + button {
+    margin-left: 0.5rem;
+  }
+}
+
+/* Improve form UX on mobile */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(156, 163, 175, 0.8);
+  }
+}
+
+/* Better dropdown/select styling on mobile */
+@media (max-width: 640px) {
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.25em 1.25em;
+    padding-right: 2.5rem;
+  }
+}
+
+/* Ensure proper spacing in lists on mobile */
+@media (max-width: 640px) {
+  ul,
+  ol {
+    padding-left: 1.5rem;
+  }
+
+  li {
+    margin-bottom: 0.5rem;
+  }
+}

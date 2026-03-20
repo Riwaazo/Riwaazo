@@ -4,32 +4,13 @@ import { motion } from "framer-motion";
 import { Shield, CheckCircle, MapPin, Headphones, Star } from "lucide-react";
 import { useState } from "react";
 
-const trustSignals = [
-  {
-    id: 1,
-    icon: Shield,
-    title: "Escrow Protection",
-    description: "Your payments protected until event completion",
-  },
-  {
-    id: 2,
-    icon: CheckCircle,
-    title: "Verified Vendors",
-    description: "Every professional thoroughly vetted",
-  },
-  {
-    id: 3,
-    icon: MapPin,
-    title: "City Verified Hosts",
-    description: "Premium venues in major metropolitan areas",
-  },
-  {
-    id: 4,
-    icon: Headphones,
-    title: "24/7 Support",
-    description: "Expert assistance whenever you need it",
-  },
-];
+type TrustAndProofProps = {
+  stats?: {
+    venues: number;
+    vendors: number;
+    cities: number;
+  };
+};
 
 const testimonials = [
   {
@@ -58,8 +39,34 @@ const testimonials = [
   },
 ];
 
-export default function TrustAndProof() {
+export default function TrustAndProof({ stats }: Readonly<TrustAndProofProps>) {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const trustSignals = [
+    {
+      id: 1,
+      icon: Shield,
+      title: "Escrow Protection",
+      description: "Your payments protected until event completion",
+    },
+    {
+      id: 2,
+      icon: CheckCircle,
+      title: "Verified Vendors",
+      description: `${stats?.vendors || 0}+ approved partners ready to deliver`,
+    },
+    {
+      id: 3,
+      icon: MapPin,
+      title: "City Verified Hosts",
+      description: `${Math.max(stats?.cities || 0, 1)} active city markets with premium venues`,
+    },
+    {
+      id: 4,
+      icon: Headphones,
+      title: "24/7 Support",
+      description: `${stats?.venues || 0}+ listings backed by guided booking support`,
+    },
+  ];
 
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#3A0000] via-[#4A0000] to-[#2a0000] border-t-8 border-[#C6A14A]">
@@ -116,10 +123,10 @@ export default function TrustAndProof() {
               {/* Text */}
               <div>
                 <div className="flex gap-1 mb-6">
-                  {[...Array(testimonials[currentTestimonial].rating)].map(
+                  {Array.from({ length: testimonials[currentTestimonial].rating }).map(
                     (_, i) => (
                       <Star
-                        key={i}
+                        key={`${testimonials[currentTestimonial].id}-star-${i + 1}`}
                         size={20}
                         className="text-[#C6A14A] fill-[#C6A14A]"
                       />
@@ -166,8 +173,9 @@ export default function TrustAndProof() {
               <div className="flex gap-2">
                 {testimonials.map((_, idx) => (
                   <button
-                    key={idx}
+                    key={`testimonial-dot-${testimonials[idx].id}`}
                     onClick={() => setCurrentTestimonial(idx)}
+                    title={`Show testimonial from ${testimonials[idx].name}`}
                     className={idx === currentTestimonial ? "w-2 h-2 rounded-full transition-colors bg-[#C6A14A]" : "w-2 h-2 rounded-full transition-colors bg-gray-700 hover:bg-gray-500"}
                   />
                 ))}

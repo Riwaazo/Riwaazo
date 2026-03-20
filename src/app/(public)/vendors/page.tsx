@@ -111,32 +111,32 @@ export default function VendorsList() {
       <div className="min-h-screen bg-gradient-to-br from-[#2A0000] via-[#3A0000] to-[#4A0000]">
         <Navbar />
 
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-12 sm:pb-16 sm:pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-12"
+              className="mb-10 text-center sm:mb-12"
             >
-              <h1 className="text-4xl sm:text-5xl font-serif text-white mb-4">
+              <h1 className="mb-4 text-3xl font-serif text-white sm:text-4xl lg:text-5xl">
                 Find Your Perfect <span className="text-[#C6A14A]">Vendors</span>
               </h1>
-              <p className="text-gray-400 max-w-2xl mx-auto">
+              <p className="mx-auto max-w-2xl text-sm text-gray-400 sm:text-base">
                   Connect with verified professionals for your special event
                   {error && <span className="text-red-300"> · {error}</span>}
                 </p>
-              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link
                   href="/vendors/join"
-                  className="px-6 py-3 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors"
+                  className="w-full rounded-lg bg-[#C6A14A] px-6 py-3 text-center font-semibold text-black transition-colors hover:bg-[#E8C56B] sm:w-auto"
                 >
                   Become a Vendor
                 </Link>
                 <Link
                   href="/auth/signup?role=vendor"
-                  className="px-6 py-3 border border-[#C6A14A] text-[#C6A14A] font-semibold rounded-lg hover:bg-[#C6A14A]/10 transition-colors"
+                  className="w-full rounded-lg border border-[#C6A14A] px-6 py-3 text-center font-semibold text-[#C6A14A] transition-colors hover:bg-[#C6A14A]/10 sm:w-auto"
                 >
                   Sign up now
                 </Link>
@@ -148,12 +148,12 @@ export default function VendorsList() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="mb-8 overflow-x-auto"
+              className="mb-8"
             >
-              <div className="flex gap-3 pb-2">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap xl:flex-nowrap xl:overflow-x-auto xl:pb-2">
                 <button
                   onClick={() => setSelectedCategory("all")}
-                  className={`px-6 py-3 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                  className={`min-w-0 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-all sm:text-base ${
                     selectedCategory === "all"
                       ? "bg-[#C6A14A] text-black"
                       : "bg-white/10 text-white hover:bg-white/20 border border-white/20"
@@ -167,14 +167,16 @@ export default function VendorsList() {
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`px-6 py-3 rounded-lg font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
+                      className={`min-w-0 rounded-lg px-4 py-3 text-sm font-semibold transition-all sm:text-base lg:flex lg:items-center lg:justify-center lg:gap-2 ${
                         selectedCategory === category.id
                           ? "bg-[#C6A14A] text-black"
                           : "bg-white/10 text-white hover:bg-white/20 border border-white/20"
                       }`}
                     >
-                      <Icon size={18} />
-                      {category.name}
+                      <span className="flex items-center justify-center gap-2 truncate">
+                        <Icon size={18} className="shrink-0" />
+                        <span className="truncate">{category.name}</span>
+                      </span>
                     </button>
                   );
                 })}

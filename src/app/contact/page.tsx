@@ -75,12 +75,12 @@ function ContactContent() {
   return (
     <SwipeTransition>
       <Navbar />
-      <main className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000] text-white pt-24 pb-20">
+      <main className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000] pb-16 pt-24 text-white sm:pb-20 sm:pt-28">
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-8 lg:grid-cols-[2fr,1fr] lg:gap-10">
             <div className="space-y-6">
               <p className="uppercase tracking-[0.3em] text-sm text-[#C6A14A]">Contact</p>
-              <h1 className="text-4xl sm:text-5xl font-serif">
+              <h1 className="text-3xl font-serif sm:text-4xl lg:text-5xl">
                 {plannerName ? `Get in touch with ${plannerName}` : "Tell us about your event."}
               </h1>
               <p className="text-gray-300 max-w-2xl">

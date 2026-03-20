@@ -28,7 +28,7 @@ export default function WelcomeScreen() {
   }, [router]);
 
   return (
-    <div className="relative h-screen w-full bg-gradient-to-br from-[#5A0000] via-[#7A0000] to-[#3A0000] overflow-hidden flex items-center justify-center">
+    <div className="relative flex min-h-[100svh] w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#5A0000] via-[#7A0000] to-[#3A0000] px-6">
       {/* Logo */}
       <motion.img
         src="/logo.png"
@@ -36,7 +36,7 @@ export default function WelcomeScreen() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.9 }}
         transition={{ duration: 1.5 }}
-        className="w-[320px] z-10"
+        className="z-10 w-[220px] sm:w-[280px] lg:w-[320px]"
       />
 
       {/* Left Curtain */}

@@ -448,16 +448,16 @@ export default function VenueDashboard() {
                   <h1 className="text-3xl font-serif text-white">Manage inquiries, occupancy, and revenue</h1>
                   <p className="text-sm text-gray-300 mt-2">Welcome back, <span className="text-white font-semibold">{greetingName}</span>. Let’s keep your venue booked and guests delighted.</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="grid w-full grid-cols-1 gap-3 sm:flex sm:w-auto sm:flex-wrap">
                   <Link
                     href="/auth/signup?role=venue-owner"
-                    className="px-4 py-2 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors"
+                    className="rounded-lg bg-[#C6A14A] px-4 py-2 text-center font-semibold text-black transition-colors hover:bg-[#E8C56B]"
                   >
                     Invite manager
                   </Link>
                   <Link
                     href="/venues"
-                    className="px-4 py-2 border border-[#C6A14A] text-[#C6A14A] font-semibold rounded-lg hover:bg-[#C6A14A]/10 transition-colors"
+                    className="rounded-lg border border-[#C6A14A] px-4 py-2 text-center font-semibold text-[#C6A14A] transition-colors hover:bg-[#C6A14A]/10"
                   >
                     View listing
                   </Link>
@@ -466,12 +466,12 @@ export default function VenueDashboard() {
             </motion.div>
 
             {/* Tabs */}
-            <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
+            <div className="mb-8 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {["overview", "inquiries", "bookings", "listing", "settings"].map((item) => (
                 <button
                   key={item}
                   onClick={() => setTab(item as typeof tab)}
-                  className={`px-4 py-2 rounded-lg font-semibold capitalize transition-all border ${
+                  className={`whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-semibold capitalize transition-all sm:text-base ${
                     tab === item
                       ? "bg-[#C6A14A] text-black border-[#C6A14A]"
                       : "bg-white/10 text-white border-white/10 hover:bg-white/15"
@@ -485,7 +485,7 @@ export default function VenueDashboard() {
             {/* Overview */}
             {tab === "overview" && (
               <div className="space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {stats.map((stat) => {
                     const Icon = stat.icon;
                     return (

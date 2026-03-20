@@ -374,7 +374,7 @@ export default function AdminPanel() {
       <div className="min-h-screen bg-gradient-to-br from-[#0B0B14] via-[#1A0F1F] to-[#1F0C0C]">
         <Navbar />
 
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-12 sm:pb-16 sm:pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             {/* Top bar */}
             <motion.div
@@ -385,18 +385,18 @@ export default function AdminPanel() {
             >
               <div>
                 <p className="text-sm text-gray-400">Admin control center</p>
-                <h1 className="text-3xl font-serif text-white">Riwaazo Admin Panel</h1>
+                <h1 className="text-2xl font-serif text-white sm:text-3xl">Riwaazo Admin Panel</h1>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
                 <Link
                   href="/admin/announcements"
-                  className="px-4 py-2 bg-[#C6A14A] text-black rounded-lg font-semibold hover:bg-[#E8C56B] transition-colors"
+                  className="rounded-lg bg-[#C6A14A] px-4 py-2 text-center font-semibold text-black transition-colors hover:bg-[#E8C56B]"
                 >
                   New announcement
                 </Link>
                 <Link
                   href="/admin/settings"
-                  className="px-4 py-2 border border-white/15 text-white rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-white transition-colors hover:bg-white/10"
                 >
                   <Settings size={16} /> Settings
                 </Link>
@@ -404,12 +404,12 @@ export default function AdminPanel() {
             </motion.div>
 
             {/* Tabs */}
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {["overview", "vendors", "venues", "planners", "bookings", "content", "users"].map((item) => (
                 <button
                   key={item}
                   onClick={() => setTab(item as typeof tab)}
-                  className={`px-4 py-2 rounded-lg font-semibold capitalize transition-all border ${
+                  className={`whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-semibold capitalize transition-all sm:text-base ${
                     tab === item
                       ? "bg-[#C6A14A] text-black border-[#C6A14A]"
                       : "bg-white/5 text-white border-white/10 hover:bg-white/10"
@@ -421,7 +421,7 @@ export default function AdminPanel() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center text-sm text-gray-200">
+            <div className="flex flex-col gap-3 text-sm text-gray-200 sm:flex-row sm:flex-wrap sm:items-center">
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
                 <Search size={14} className="text-[#C6A14A]" />
                 <input

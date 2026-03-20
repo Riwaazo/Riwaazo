@@ -144,15 +144,15 @@ function SignupContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000] text-white">
       <Navbar />
-      <main className="flex items-center justify-center px-4 py-16">
-        <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 bg-white/95 text-gray-900 border border-white/20 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden backdrop-blur">
+      <main className="flex items-start justify-center px-4 pb-12 pt-24 sm:items-center sm:py-16">
+        <div className="grid w-full max-w-4xl grid-cols-1 overflow-hidden rounded-2xl border border-white/20 bg-white/95 text-gray-900 shadow-2xl shadow-black/30 backdrop-blur lg:grid-cols-2">
           <div className="hidden lg:flex flex-col justify-center gap-3 bg-gradient-to-br from-[#5A0000] via-[#4A0000] to-[#3A0000] px-10 py-12 text-white">
             <p className="uppercase text-xs tracking-[0.25em] text-[#C6A14A]">Riwaazo</p>
             <h1 className="text-3xl font-serif leading-tight">Create your account</h1>
             <p className="text-gray-200">Start saving venues, vendors, and planning your event.</p>
           </div>
 
-          <div className="px-8 py-10">
+          <div className="px-5 py-8 sm:px-8 sm:py-10">
             <div className="mb-8 space-y-2">
               <h2 className="text-2xl font-semibold text-gray-900">Sign up</h2>
               <p className="text-gray-600 text-sm">Join the platform in a few seconds.</p>
@@ -163,7 +163,7 @@ function SignupContent() {
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
               <div className="space-y-2">
                 <label className="text-sm text-gray-700">Choose your role</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {[
                     { id: "user", label: "User" },
                     { id: "vendor", label: "Vendor" },

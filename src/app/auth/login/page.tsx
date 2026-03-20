@@ -100,15 +100,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000] text-white">
       <Navbar />
-      <main className="flex items-center justify-center px-4 py-16">
-        <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 bg-white/95 text-gray-900 border border-white/20 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden backdrop-blur">
+      <main className="flex items-start justify-center px-4 pb-12 pt-24 sm:items-center sm:py-16">
+        <div className="grid w-full max-w-4xl grid-cols-1 overflow-hidden rounded-2xl border border-white/20 bg-white/95 text-gray-900 shadow-2xl shadow-black/30 backdrop-blur lg:grid-cols-2">
           <div className="hidden lg:flex flex-col justify-center gap-3 bg-gradient-to-br from-[#5A0000] via-[#4A0000] to-[#3A0000] px-10 py-12 text-white">
             <p className="uppercase text-xs tracking-[0.25em] text-[#C6A14A]">Riwaazo</p>
             <h1 className="text-3xl font-serif leading-tight">Welcome back</h1>
             <p className="text-gray-200">Access your dashboard, favorites, and bookings.</p>
           </div>
 
-          <div className="px-8 py-10">
+          <div className="px-5 py-8 sm:px-8 sm:py-10">
             <div className="mb-8 space-y-2">
               <h2 className="text-2xl font-semibold text-gray-900">Sign in</h2>
               <p className="text-gray-600 text-sm mt-1">Use your email and password to continue.</p>

@@ -101,31 +101,31 @@ export default function VenuesList() {
       <div className="min-h-screen bg-gradient-to-br from-[#2A0000] via-[#3A0000] to-[#4A0000]">
         <Navbar />
 
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-12 sm:pb-16 sm:pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-12"
+              className="mb-10 text-center sm:mb-12"
             >
-              <h1 className="text-4xl sm:text-5xl font-serif text-white mb-4">
+              <h1 className="mb-4 text-3xl font-serif text-white sm:text-4xl lg:text-5xl">
                 Discover Your Perfect <span className="text-[#C6A14A]">Venue</span>
               </h1>
-              <p className="text-gray-400 max-w-2xl mx-auto">
+              <p className="mx-auto max-w-2xl text-sm text-gray-400 sm:text-base">
                 Browse through our curated selection of premium venues
               </p>
-              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link
                   href="/venues/join"
-                  className="px-6 py-3 bg-[#C6A14A] text-black font-semibold rounded-lg hover:bg-[#E8C56B] transition-colors"
+                  className="w-full rounded-lg bg-[#C6A14A] px-6 py-3 text-center font-semibold text-black transition-colors hover:bg-[#E8C56B] sm:w-auto"
                 >
                   List your venue
                 </Link>
                 <Link
                   href="/auth/signup?role=venue-owner"
-                  className="px-6 py-3 border border-[#C6A14A] text-[#C6A14A] font-semibold rounded-lg hover:bg-[#C6A14A]/10 transition-colors"
+                  className="w-full rounded-lg border border-[#C6A14A] px-6 py-3 text-center font-semibold text-[#C6A14A] transition-colors hover:bg-[#C6A14A]/10 sm:w-auto"
                 >
                   Sign up now
                 </Link>

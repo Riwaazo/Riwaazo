@@ -4,46 +4,26 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { UtensilsCrossed, Sparkles, Camera, Music, ClipboardList, Palette } from "lucide-react";
 
-const professionals = [
-  {
-    id: 1,
-    name: "Catering",
-    icon: UtensilsCrossed,
-    description: "Premium culinary experiences",
-  },
-  {
-    id: 2,
-    name: "Decor",
-    icon: Sparkles,
-    description: "Stunning event aesthetics",
-  },
-  {
-    id: 3,
-    name: "Photography",
-    icon: Camera,
-    description: "Capture your moments",
-  },
-  {
-    id: 4,
-    name: "Music & Entertainment",
-    icon: Music,
-    description: "Live performances & DJs",
-  },
-  {
-    id: 5,
-    name: "Event Planning",
-    icon: ClipboardList,
-    description: "Complete coordination",
-  },
-  {
-    id: 6,
-    name: "Makeup & Styling",
-    icon: Palette,
-    description: "Professional beauty services",
-  },
-];
+const iconMap = [UtensilsCrossed, Sparkles, Camera, Music, ClipboardList, Palette];
 
-export default function CuratedProfessionals() {
+type ProfessionalCategory = {
+  name: string;
+  description: string;
+  count: number;
+};
+
+type CuratedProfessionalsProps = {
+  categories: ProfessionalCategory[];
+  totalVendors: number;
+};
+
+export default function CuratedProfessionals({ categories, totalVendors }: Readonly<CuratedProfessionalsProps>) {
+  const professionals = categories.map((category, index) => ({
+    id: `${category.name}-${index}`,
+    ...category,
+    icon: iconMap[index % iconMap.length],
+  }));
+
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#3A0000] via-[#4A0000] to-[#2a0000] border-t-8 border-[#C6A14A]">
       <div className="max-w-7xl mx-auto">
@@ -58,7 +38,7 @@ export default function CuratedProfessionals() {
             Curated <span className="text-[#C6A14A]">Professionals</span>
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Verified vendors and service providers for every aspect of your event
+            Verified vendors and service providers across {Math.max(totalVendors, 0)} active profiles
           </p>
         </motion.div>
 
@@ -90,7 +70,8 @@ export default function CuratedProfessionals() {
                   <h3 className="text-xl font-semibold text-white mb-2">
                     {prof.name}
                   </h3>
-                  <p className="text-gray-400 text-sm mb-6">{prof.description}</p>
+                  <p className="text-gray-400 text-sm mb-2">{prof.description}</p>
+                  <p className="text-[#C6A14A] text-xs mb-6">{prof.count} verified partners</p>
 
                   {/* CTA */}
                   <Link
@@ -104,6 +85,12 @@ export default function CuratedProfessionals() {
             );
           })}
         </div>
+
+        {professionals.length === 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center text-gray-300">
+            Vendor categories will appear here once approved professionals are published.
+          </div>
+        )}
       </div>
     </section>
   );

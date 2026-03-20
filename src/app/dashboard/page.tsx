@@ -928,7 +928,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gradient-to-br from-[#2A0000] via-[#3A0000] to-[#4A0000]">
         <Navbar />
 
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-12 sm:pb-16 sm:pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <motion.div
@@ -937,17 +937,17 @@ export default function Dashboard() {
               transition={{ duration: 0.6 }}
               className="mb-8"
             >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                  <h1 className="text-3xl font-serif text-white mb-2">
+                  <h1 className="mb-2 text-2xl font-serif text-white sm:text-3xl">
                     Welcome back, <span className="text-[#C6A14A]">{user.name}</span>
                   </h1>
-                  <p className="text-gray-400">Manage your events and bookings</p>
+                  <p className="text-sm text-gray-400 sm:text-base">Manage your events and bookings</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex w-full items-center gap-3 sm:w-auto">
                   <button
                     onClick={() => setActiveTab("notifications")}
-                    className="p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors relative"
+                    className="relative rounded-lg bg-white/10 p-3 transition-colors hover:bg-white/20"
                   >
                     <Bell size={20} className="text-white" />
                     {unreadNotifications > 0 && (
@@ -958,13 +958,13 @@ export default function Dashboard() {
                   </button>
                   <button
                     onClick={() => setActiveTab("settings")}
-                    className="p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                    className="rounded-lg bg-white/10 p-3 transition-colors hover:bg-white/20"
                   >
                     <Settings size={20} className="text-white" />
                   </button>
                   <button
                     onClick={() => setActiveTab("profile")}
-                    className="w-10 h-10 bg-[#C6A14A] rounded-full flex items-center justify-center font-semibold text-black"
+                    className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#C6A14A] font-semibold text-black sm:ml-0"
                   >
                     {user.avatar || "?"}
                   </button>
@@ -978,13 +978,13 @@ export default function Dashboard() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="mb-8"
             >
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {["overview", "events", "favorites", "bookings", "messages", "calendar", "tasks", "budget", "notifications", "settings", "profile"].map(
                   (tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab as typeof activeTab)}
-                      className={`px-5 py-3 rounded-lg font-semibold capitalize whitespace-nowrap transition-all border ${
+                      className={`whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-semibold capitalize transition-all sm:px-5 sm:py-3 sm:text-base ${
                         activeTab === tab
                           ? "bg-[#C6A14A] text-black border-[#C6A14A]"
                           : "bg-white/10 text-white border-white/10 hover:bg-white/20"
@@ -1005,7 +1005,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="grid grid-cols-1 md:grid-cols-4 gap-4"
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
                 >
                   <div className="bg-gradient-to-br from-[#8B0000] to-[#5A0000] rounded-xl p-6 border border-[#C6A14A]/20">
                     <Calendar className="w-8 h-8 text-[#C6A14A] mb-3" />

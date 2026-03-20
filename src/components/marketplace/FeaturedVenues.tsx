@@ -2,52 +2,33 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { MapPin, Star, Users } from "lucide-react";
+import Image from "next/image";
+import { MapPin, Star } from "lucide-react";
 
-const venues = [
-  {
-    id: 1,
-    name: "Royal Palace Heritage",
-    location: "New Delhi",
-    price: "₹5,00,000",
-    rating: 4.9,
-    reviews: 128,
-    capacity: "500-1000",
-    image: "bg-gradient-to-br from-[#8B0000] to-[#5A0000]",
-  },
-  {
-    id: 2,
-    name: "Garden Vista Luxury",
-    location: "Mumbai",
-    price: "₹4,50,000",
-    rating: 4.8,
-    reviews: 95,
-    capacity: "300-600",
-    image: "bg-gradient-to-br from-[#7A0000] to-[#4A0000]",
-  },
-  {
-    id: 3,
-    name: "Metropolitan Elegance",
-    location: "Bangalore",
-    price: "₹3,80,000",
-    rating: 4.7,
-    reviews: 87,
-    capacity: "200-400",
-    image: "bg-gradient-to-br from-[#9B0000] to-[#5A0000]",
-  },
-  {
-    id: 4,
-    name: "Lake Side Manor",
-    location: "Hyderabad",
-    price: "₹4,20,000",
-    rating: 4.9,
-    reviews: 112,
-    capacity: "400-800",
-    image: "bg-gradient-to-br from-[#8B0000] to-[#6A0000]",
-  },
+type FeaturedVenue = {
+  id: string;
+  slug: string;
+  name: string;
+  location: string;
+  price: string;
+  rating: number;
+  reviews: number;
+  capacity: string;
+  image: string | null;
+};
+
+const fallbackGradients = [
+  "bg-gradient-to-br from-[#8B0000] to-[#5A0000]",
+  "bg-gradient-to-br from-[#7A0000] to-[#4A0000]",
+  "bg-gradient-to-br from-[#9B0000] to-[#5A0000]",
+  "bg-gradient-to-br from-[#8B0000] to-[#6A0000]",
 ];
 
-export default function FeaturedVenues() {
+type FeaturedVenuesProps = {
+  venues: FeaturedVenue[];
+};
+
+export default function FeaturedVenues({ venues }: Readonly<FeaturedVenuesProps>) {
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#4A0000] via-[#3A0000] to-[#2a0000] border-t-8 border-[#C6A14A]">
       <div className="max-w-7xl mx-auto">
@@ -84,12 +65,21 @@ export default function FeaturedVenues() {
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
               >
                 <Link
-                  href={`/venues/${venue.id}`}
+                  href={`/venues/${venue.slug || venue.id}`}
                   className="block bg-gradient-to-br from-[#8B0000] to-[#5A0000] rounded-lg overflow-hidden hover:shadow-2xl hover:shadow-[#C6A14A]/20 transition-all duration-300"
                 >
 
                 {/* Image */}
-                <div className={`h-48 ${venue.image} relative overflow-hidden`}>
+                <div className={`relative h-48 overflow-hidden ${venue.image ? "bg-[#5A0000]" : fallbackGradients[idx % fallbackGradients.length]}`}>
+                  {venue.image && (
+                    <Image
+                      src={venue.image}
+                      alt={venue.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                   <div className="absolute top-4 right-4 bg-[#C6A14A] text-black px-3 py-1 rounded-full text-sm font-semibold">
                     {venue.capacity}
@@ -135,6 +125,12 @@ export default function FeaturedVenues() {
             </motion.div>
           ))}
         </div>
+
+        {venues.length === 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center text-gray-300">
+            Featured venues will appear here once approved listings are available.
+          </div>
+        )}
 
         {/* View All Button */}
         <motion.div

@@ -263,19 +263,19 @@ export default function BudgetCalculator() {
       <div className="min-h-screen bg-gradient-to-br from-[#2A0000] via-[#3A0000] to-[#4A0000]">
         <Navbar />
 
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-12 sm:pb-16 sm:pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-12"
+              className="mb-10 text-center sm:mb-12"
             >
-              <h1 className="text-4xl sm:text-5xl font-serif text-white mb-4">
+              <h1 className="mb-4 text-3xl font-serif text-white sm:text-4xl lg:text-5xl">
                 Budget <span className="text-[#C6A14A]">Calculator</span>
               </h1>
-              <p className="text-gray-400 max-w-2xl mx-auto">
+              <p className="mx-auto max-w-2xl text-sm text-gray-400 sm:text-base">
                 Plan your event finances with detailed breakdown and smart
                 recommendations
               </p>
@@ -288,7 +288,7 @@ export default function BudgetCalculator() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 }}
-                  className="bg-gradient-to-br from-[#8B0000] to-[#5A0000] rounded-xl p-6 border border-[#C6A14A]/20 sticky top-24"
+                  className="rounded-xl border border-[#C6A14A]/20 bg-gradient-to-br from-[#8B0000] to-[#5A0000] p-4 sm:p-6 lg:sticky lg:top-24"
                 >
                   <h2 className="text-xl font-serif text-white mb-6">
                     Event Details

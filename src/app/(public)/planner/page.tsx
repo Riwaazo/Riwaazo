@@ -171,19 +171,19 @@ export default function EventPlanner() {
       <div className="min-h-screen bg-gradient-to-br from-[#2A0000] via-[#3A0000] to-[#4A0000]">
         <Navbar />
 
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-12 sm:pb-16 sm:pt-28">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-12"
+              className="mb-10 text-center sm:mb-12"
             >
-              <h1 className="text-4xl sm:text-5xl font-serif text-white mb-4">
+              <h1 className="mb-4 text-3xl font-serif text-white sm:text-4xl lg:text-5xl">
                 Plan Your <span className="text-[#C6A14A]">Perfect Event</span>
               </h1>
-              <p className="text-gray-400 max-w-2xl mx-auto">
+              <p className="mx-auto max-w-2xl text-sm text-gray-400 sm:text-base">
                 Let us help you create an unforgettable experience with
                 personalized recommendations
               </p>
@@ -194,9 +194,9 @@ export default function EventPlanner() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="mb-12"
+              className="mb-12 overflow-x-auto"
             >
-              <div className="flex justify-between items-center relative">
+              <div className="relative flex min-w-[620px] items-center justify-between">
                 {/* Progress Line */}
                 <div className="absolute top-5 left-0 w-full h-1 bg-white/10">
                   <motion.div

@@ -448,7 +448,7 @@ export default function EventPlannerDashboardPage() {
   const tabItems = ["overview", "events", "bookings", "messages", "notifications", "profile", "settings"] as const;
 
   return (
-    <main className="min-h-screen bg-[#0B0B14] text-gray-100 px-6 pb-12 pt-28 relative overflow-hidden">
+    <main className="relative min-h-screen overflow-hidden bg-[#0B0B14] px-4 pb-12 pt-24 text-gray-100 sm:px-6 sm:pt-28">
       <Navbar />
       <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden>
         <div className="absolute -left-20 -top-24 h-80 w-80 rounded-full blur-3xl" style={{ backgroundColor: `${palette.red}26` }} />
@@ -458,29 +458,29 @@ export default function EventPlannerDashboardPage() {
 
       <div className="relative max-w-6xl mx-auto space-y-8">
         {/* Header bar */}
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm px-5 py-4 shadow-xl">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 shadow-xl backdrop-blur-sm sm:px-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em]" style={{ color: palette.goldLight }}>
               <Sparkles size={14} /> Event Planner
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-400">
-              <span className="text-white text-2xl font-semibold">Planner Control Room</span>
-              <span className="h-6 w-px bg-white/10" />
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+              <span className="text-xl font-semibold text-white sm:text-2xl">Planner Control Room</span>
+              <span className="hidden h-6 w-px bg-white/10 sm:block" />
               <span>Dashboard</span>
               <ArrowRight size={12} />
               <span style={{ color: palette.goldLight }}>Live overview</span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <button
               onClick={() => router.push("/dashboard/events")}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white hover:border-white/30"
+              className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-white hover:border-white/30"
               style={{ borderColor: `${palette.red}80`, backgroundColor: `${palette.red}26` }}
             >
               <Plus size={16} /> New event
             </button>
             <button
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-200 hover:border-white/40"
+              className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-200 hover:border-white/40"
               style={{ borderColor: `${palette.red}80`, backgroundColor: `${palette.red}1f` }}
             >
               <Download size={16} /> Export CSV
@@ -489,17 +489,17 @@ export default function EventPlannerDashboardPage() {
         </div>
 
         {/* Welcome bar */}
-        <section className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 shadow-lg flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <section className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 shadow-lg sm:px-5 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm text-gray-300">Welcome back,</p>
             <p className="text-2xl font-semibold text-white">{plannerName || "Planner"}</p>
             <p className="text-sm text-gray-400">Your portfolio, events, and communications in one place.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/event-planners" className="rounded-lg px-3 py-2 text-sm" style={{ border: `1px solid ${palette.red}`, backgroundColor: `${palette.red}1f`, color: palette.goldLight }}>
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
+            <Link href="/event-planners" className="rounded-lg px-3 py-2 text-center text-sm" style={{ border: `1px solid ${palette.red}`, backgroundColor: `${palette.red}1f`, color: palette.goldLight }}>
               View marketplace listing
             </Link>
-            <Link href="/event-planner/profile" className="rounded-lg px-3 py-2 text-sm" style={{ border: `1px solid ${palette.gold}`, backgroundColor: `${palette.gold}26`, color: palette.goldLight }}>
+            <Link href="/event-planner/profile" className="rounded-lg px-3 py-2 text-center text-sm" style={{ border: `1px solid ${palette.gold}`, backgroundColor: `${palette.gold}26`, color: palette.goldLight }}>
               Edit profile
             </Link>
           </div>
@@ -510,12 +510,12 @@ export default function EventPlannerDashboardPage() {
         )}
 
         {/* ===== Tab Bar ===== */}
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabItems.map((item) => (
             <button
               key={item}
               onClick={() => setTab(item)}
-              className={`px-4 py-2 rounded-lg font-semibold capitalize transition-all border whitespace-nowrap ${
+              className={`whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-semibold capitalize transition-all sm:text-base ${
                 tab === item
                   ? "bg-[#C6A14A] text-black border-[#C6A14A]"
                   : "bg-white/10 text-white border-white/10 hover:bg-white/15"
@@ -538,7 +538,7 @@ export default function EventPlannerDashboardPage() {
             {tab === "overview" && (
               <div className="space-y-8">
                 {/* Stat cards */}
-                <section className="grid gap-4 md:grid-cols-4">
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {[{
                     label: "Active events",
                     value: activeEvents.length,
