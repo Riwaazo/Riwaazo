@@ -1,7 +1,28 @@
 import type { NextConfig } from "next";
 
+// Minimal config; Turbopack options are not valid in next.config.ts
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  eslint: {
+    // Skip Next's deprecated lint runner during build; use "npm run lint" instead
+    ignoreDuringBuilds: true,
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "zyzwyuqeepnbusnndvym.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
