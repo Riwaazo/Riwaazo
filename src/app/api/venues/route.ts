@@ -129,10 +129,10 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const session = await getSessionUser();
-  const isPublic = !session;
-
   try {
+    const session = await getSessionUser();
+    const isPublic = !session;
+
     let where: Prisma.VenueWhereInput = {};
     switch (session?.role) {
       case "ADMIN":
@@ -188,7 +188,13 @@ export async function GET() {
     return NextResponse.json(venues);
   } catch (error) {
     console.error("GET /api/venues", error);
-    return NextResponse.json({ error: "Failed to fetch venues" }, { status: 500 });
+    return NextResponse.json([], {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Fallback": "venues-unavailable",
+      },
+    });
   }
 }
 
