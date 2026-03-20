@@ -117,7 +117,11 @@ export async function GET(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    await ensureProfiles(user as any);
+    try {
+      await ensureProfiles(user as any);
+    } catch (error) {
+      console.error("post-login profile sync failed", error);
+    }
   }
 
   const role = (user?.user_metadata?.role as string | undefined) ?? "user";
